@@ -177,3 +177,5 @@ int main() {
 
     return 0; // Exit successfully
 }
+
+void test(){}
