@@ -1,7 +1,7 @@
 #ifndef PATIENT_H
 #define PATIENT_H
 
-#include "utils.hpp"
+#include "Utils.hpp"
 #include "User.hpp"
 
 class Patient : public User

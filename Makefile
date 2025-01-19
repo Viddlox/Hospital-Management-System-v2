@@ -3,10 +3,10 @@ NAME = Hospital_Management_System
 
 # Compiler and flags
 CC = g++
-CFLAGS = -Wall -std=c++17 -Iincludes -mavx2
+CFLAGS = -Wall -std=c++17 -Iincludes/external -Iincludes/classes -Iincludes/helpers -mavx2
 
 # Source files and object files
-SRCS = $(wildcard src/*.cpp)
+SRCS = $(wildcard src/helpers/*.cpp) src/main.cpp
 OBJ_DIR = obj
 OBJ = $(patsubst src/%.cpp, $(OBJ_DIR)/%.o, $(SRCS))
 
