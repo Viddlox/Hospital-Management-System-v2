@@ -3,7 +3,7 @@ NAME = Hospital_Management_System
 
 # Compiler and flags
 CC = g++
-CFLAGS = -Wall -std=c++17 -Iincludes -mavx2
+CFLAGS = -Wall -std=c++17 -Iincludes -Iincludes/external -mavx2
 
 # Source files and object files
 SRCS = $(wildcard src/*.cpp)
