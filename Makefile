@@ -1,12 +1,12 @@
 # Program name
-NAME = Hospital_Management_System
+NAME = Hospital_Management_System.exe
 
 # Compiler and flags
 CC = g++
-CFLAGS = -Wall -std=c++17 -Iincludes/external -Iincludes/classes -Iincludes/helpers -mavx2
+CFLAGS = -Wall -std=c++17 -Iincludes -Iincludes/external -Iincludes/classes -mavx2 -m64
 
 # Source files and object files
-SRCS = $(wildcard src/helpers/*.cpp) src/main.cpp
+SRCS = $(wildcard src/*.cpp)
 OBJ_DIR = obj
 OBJ = $(patsubst src/%.cpp, $(OBJ_DIR)/%.o, $(SRCS))
 
