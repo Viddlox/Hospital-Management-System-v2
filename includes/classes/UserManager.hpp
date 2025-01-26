@@ -351,6 +351,23 @@ public:
 			return true;
 		return false;
 	}
+	int getAdminCount()
+	{
+		std::string filePath = "db/admin/";
+		int count = 0;
+
+		if (std::filesystem::exists(filePath) && std::filesystem::is_directory(filePath))
+		{
+			for (const auto &entry : std::filesystem::directory_iterator(filePath))
+			{
+				if (std::filesystem::is_regular_file(entry))
+				{
+					++count;
+				}
+			}
+		}
+		return count;
+	}
 };
 
 #endif

@@ -73,32 +73,33 @@ private:
             std::string subHeader1 = "Welcome to MedTek+ CLI";
             std::string subHeader2 = "Please enter your login credentials below";
 
-            int baseline = 11; // Baseline after the header
+            int baseline = 11;
             mvprintw(baseline, (COLS - subHeader1.length()) / 2, "%s", subHeader1.c_str());
             mvprintw(baseline + 2, (COLS - subHeader2.length()) / 2, "%s", subHeader2.c_str());
 
-            // Create windows for form
-            int form_start_y = baseline + 4; // Form starts below subheaders
+            // Create the main window for the form
+            int form_start_y = baseline + 4;
             int form_start_x = (COLS - 50) / 2;
-
-            // Create window for form body (with proper size)
             WINDOW *win_body = newwin(12, 50, form_start_y, form_start_x);
-            assert(win_body);
-            box(win_body, 0, 0);
 
-            // Create window for form (to display input fields)
-            WINDOW *win_form = derwin(win_body, 8, 48, 2, 1); // Adjust position so it fits properly inside the parent window
-            assert(win_form);
-            box(win_form, 0, 0);
             wbkgd(win_body, COLOR_PAIR(colorScheme.primary));
+            box(win_body, 0, 0);
             mvwprintw(win_body, 1, 2, "Login Form");
+            refresh();
+            wrefresh(win_body);
+
+            // Create a subwindow inside the main window for the form
+            WINDOW *win_form = derwin(win_body, 8, 48, 3, 1);
+            wbkgd(win_form, COLOR_PAIR(colorScheme.primary));
+            box(win_form, 0, 0);
+            wrefresh(win_form);
 
             // Create form fields
             FIELD *fields[5];
-            fields[0] = new_field(1, 10, 0, 1, 0, 0);  // Username label (starts at column 1)
-            fields[1] = new_field(1, 30, 0, 12, 0, 0); // Username input (leaves space after the label)
-            fields[2] = new_field(1, 10, 2, 1, 0, 0);  // Password label
-            fields[3] = new_field(1, 30, 2, 12, 0, 0); // Password input
+            fields[0] = new_field(1, 10, 0, 1, 0, 0);
+            fields[1] = new_field(1, 30, 0, 13, 0, 0);
+            fields[2] = new_field(1, 10, 2, 1, 0, 0);
+            fields[3] = new_field(1, 30, 2, 13, 0, 0);
             fields[4] = NULL;
 
             assert(fields[0] && fields[1] && fields[2] && fields[3]);
@@ -115,7 +116,7 @@ private:
             set_field_opts(fields[2], O_VISIBLE | O_PUBLIC | O_AUTOSKIP);
             set_field_opts(fields[3], O_VISIBLE | O_PUBLIC | O_EDIT | O_ACTIVE);
 
-            // Set field color schemes
+            // Set field background color
             set_field_back(fields[0], COLOR_PAIR(colorScheme.primary));
             set_field_back(fields[1], COLOR_PAIR(colorScheme.primary));
             set_field_back(fields[2], COLOR_PAIR(colorScheme.primary));
@@ -124,36 +125,64 @@ private:
             // Create and post form
             FORM *form = new_form(fields);
             assert(form);
-            set_form_win(form, win_form);
-            set_form_sub(form, derwin(win_body, 6, 46, 2, 1));
+            set_form_win(form, win_form);                      // Attach form to the subwindow
+            set_form_sub(form, derwin(win_form, 6, 46, 1, 1)); // Form subwindow inside win_form
             post_form(form);
 
-            set_current_field(form, fields[1]);
-
-            // Refresh window
-            refresh();
+            // Refresh the windows
             wrefresh(win_body);
             wrefresh(win_form);
 
             // Main input loop
             int ch;
             while ((ch = getch()) != '\n')
-                driver(ch, form, win_form, fields);
+            {
+                switch (ch)
+                {
+                case KEY_DOWN:
+                    form_driver(form, REQ_NEXT_FIELD);
+                    form_driver(form, REQ_END_LINE);
+                    break;
+                case KEY_UP:
+                    form_driver(form, REQ_PREV_FIELD);
+                    form_driver(form, REQ_END_LINE);
+                    break;
+                case KEY_LEFT:
+                    form_driver(form, REQ_PREV_CHAR);
+                    break;
+                case KEY_RIGHT:
+                    form_driver(form, REQ_NEXT_CHAR);
+                    break;
+                case KEY_BACKSPACE:
+                case 127:
+                    form_driver(form, REQ_DEL_PREV);
+                    break;
+                case KEY_DC:
+                    form_driver(form, REQ_DEL_CHAR);
+                    break;
+                default:
+                    form_driver(form, ch);
+                    break;
+                }
+                wrefresh(win_form);
+            }
 
             form_driver(form, REQ_VALIDATION);
 
+            // Extract form data
             std::string username = trim_whitespaces(field_buffer(fields[1], 0));
             std::string password = trim_whitespaces(field_buffer(fields[3], 0));
 
+            // Validate user credentials
             if (userManager->validateUser(username, password))
             {
-                switchScreen(Screen::Dashboard);
                 unpost_form(form);
                 free_form(form);
                 for (int i = 0; fields[i]; ++i)
                     free_field(fields[i]);
                 delwin(win_form);
                 delwin(win_body);
+                switchScreen(Screen::Dashboard);
             }
             else
             {
@@ -164,6 +193,7 @@ private:
                 clear();
             }
         }
+
         else if (screen == Screen::Dashboard)
         {
             bkgd(COLOR_PAIR(colorScheme.primary));
@@ -237,7 +267,8 @@ public:
         isRunning.store(true);
         notificationThread = std::thread(&EventManager::handleNotifications, this);
         timeThread = std::thread(&EventManager::handleTime, this);
-        userManager->createAdmin("admin", "1234");
+        if (userManager->getAdminCount() < 1)
+            userManager->createAdmin("admin", "1234");
         initScreen();
         try
         {
