@@ -2,6 +2,13 @@
 #include "EventManager.hpp"
 #include "UserManager.hpp"
 
+struct Color
+{
+    int primary = 1;
+    int secondary = 2;
+    int danger = 3;
+};
+
 void initializeColors()
 {
     start_color();
@@ -13,22 +20,21 @@ void initializeColors()
 
     // Define color pairs
     init_pair(1, COLOR_GREEN, COLOR_BLACK);
-    init_pair(2, COLOR_GREEN, COLOR_GREEN);
+    init_pair(2, COLOR_WHITE, COLOR_BLACK);
     init_pair(3, COLOR_RED, COLOR_BLACK);
 }
 
 void renderHeader()
 {
     Color colorScheme;
-    attron(COLOR_PAIR(colorScheme.primary)); // Set the color for the text and box
+    attron(COLOR_PAIR(colorScheme.primary));
     bkgd(COLOR_PAIR(colorScheme.primary));
 
     int row = 0;
     int col = (COLS - 81) / 2;
 
-    // Create a window to contain the header and the box around it
-    WINDOW *header_win = newwin(10, 82, row, col); // Set appropriate window size
-    box(header_win, 0, 0);                         // Draw a box around the window
+    WINDOW *header_win = newwin(10, 82, row, col);
+    box(header_win, 0, 0);
 
     mvwprintw(header_win, 1, 1, "  /$$      /$$                 /$$ /$$$$$$$$           /$$                      ");
     mvwprintw(header_win, 2, 1, " | $$$    /$$$                | $$|__  $$__/          | $$               /$$    ");
@@ -38,8 +44,6 @@ void renderHeader()
     mvwprintw(header_win, 6, 1, " | $$\\  $ | $$| $$_____/| $$  | $$   | $$   | $$_____/| $$_  $$         | $$   ");
     mvwprintw(header_win, 7, 1, " | $$ \\/  | $$|  $$$$$$$|  $$$$$$$   | $$   |  $$$$$$$| $$ \\  $$        |__/  ");
     mvwprintw(header_win, 8, 1, " |__/     |__/ \\_______/ \\_______/   |__/    \\_______/|__/  \\__/            ");
-
-    // Make sure the header content is displayed within the window
 
     wbkgd(header_win, COLOR_PAIR(colorScheme.primary));
     refresh();
@@ -161,6 +165,48 @@ void driver(int ch, FORM *form, WINDOW *win_form, FIELD **fields)
     wrefresh(win_form);
 }
 
+std::vector<std::string> split_string(std::string toSplit, int maxLength)
+{
+    std::vector<std::string> result;
+    std::string line;
+    std::istringstream stream(toSplit);
+    std::string word;
+
+    while (stream >> word)
+    {
+        if (line.length() + word.length() + 1 <= static_cast<size_t>(maxLength))
+        {
+            if (line.empty())
+                line = word;
+            else
+                line += " " + word;
+        }
+        else
+        {
+            result.push_back(line);
+            line = word;
+        }
+    }
+    if (!line.empty())
+    {
+        result.push_back(line);
+    }
+    return result;
+}
+
+void printCentered(WINDOW *win, int startRow, const std::string &text)
+{
+    int centerCol = getmaxx(win) / 2;
+    std::vector<std::string> lines = split_string(text, getmaxx(win));
+
+    for (size_t i = 0; i < lines.size(); i++)
+    {
+        int halfLength = lines[i].length() / 2;
+        int adjustedCol = centerCol - halfLength;
+        mvwprintw(win, startRow + i, adjustedCol, "%s", lines[i].c_str());
+    }
+}
+
 void renderLoginScreen()
 {
     EventManager &eventManager = EventManager::getInstance();
@@ -229,9 +275,18 @@ void renderLoginScreen()
     set_form_sub(form, derwin(win_form, 6, 46, 1, 1)); // Form subwindow inside win_form
     post_form(form);
 
+    int footer_start_y = form_start_y + 12;
+    int footer_start_x = (COLS - 33) / 2;
+    std::string footer = "Don't have an existing account? Press Ctrl+r to register now";
+    WINDOW *win_footer = newwin(4, 33, footer_start_y, footer_start_x);
+    wbkgd(win_footer, COLOR_PAIR(colorScheme.primary));
+    box(win_footer, 0, 0);
+    printCentered(win_footer, 1, footer);
+
     // Refresh the windows
     wrefresh(win_body);
     wrefresh(win_form);
+    wrefresh(win_footer);
 
     // Main input loop
     int ch;
@@ -256,6 +311,19 @@ void renderLoginScreen()
         case KEY_BACKSPACE:
         case 127:
             form_driver(form, REQ_DEL_PREV);
+            break;
+        case 27:
+            eventManager.exit();
+            break;
+        case 18:
+            unpost_form(form);
+            free_form(form);
+            for (int i = 0; fields[i]; ++i)
+                free_field(fields[i]);
+            delwin(win_form);
+            delwin(win_body);
+            delwin(win_footer);
+            eventManager.switchScreen(Screen::Register);
             break;
         case KEY_DC:
             form_driver(form, REQ_DEL_CHAR);
@@ -282,6 +350,7 @@ void renderLoginScreen()
             free_field(fields[i]);
         delwin(win_form);
         delwin(win_body);
+        delwin(win_footer);
         eventManager.switchScreen(Screen::Dashboard);
     }
     else
@@ -294,13 +363,24 @@ void renderLoginScreen()
     }
 }
 
+void renderRegistrationScreen()
+{
+    Color colorScheme;
+    bkgd(COLOR_PAIR(colorScheme.primary));
+
+    std::string subHeader = "Register a MedTek user account";
+
+    int baseline = 11;
+    mvprintw(baseline, (COLS - subHeader.length()) / 2, "%s", subHeader.c_str());
+}
+
 void renderDashboardScreen()
 {
     Color colorScheme;
     bkgd(COLOR_PAIR(colorScheme.primary));
 
-    std::string subHeader1 = "Dashboard";
+    std::string subHeader = "Dashboard";
 
     int baseline = 11;
-    mvprintw(baseline, (COLS - subHeader1.length()) / 2, "%s", subHeader1.c_str());
+    mvprintw(baseline, (COLS - subHeader.length()) / 2, "%s", subHeader.c_str());
 }

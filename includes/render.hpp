@@ -14,6 +14,8 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <cassert>
+#include <vector>
+#include <sstream>
 
 #include <csignal>
 #if defined(_WIN32) || defined(_WIN64)
@@ -36,13 +38,6 @@ enum class Screen
     Appointment,
 };
 
-struct Color
-{
-    int primary = 1;
-    int secondary = 2;
-    int danger = 3;
-};
-
 void renderHeader();
 void renderTime(std::time_t time);
 void clearScreen();
@@ -52,5 +47,6 @@ char* trim_whitespaces(char *str);
 void driver(int ch, FORM *form, WINDOW *win_form, FIELD **fields);
 void renderLoginScreen();
 void renderDashboardScreen();
+void renderRegistrationScreen();
 
 #endif

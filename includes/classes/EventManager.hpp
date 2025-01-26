@@ -73,6 +73,7 @@ private:
             renderDashboardScreen();
             break;
         case Screen::Register:
+            renderRegistrationScreen();
             break;
         case Screen::Roster:
             break;
@@ -168,6 +169,7 @@ public:
         clear();
         refresh();
         endwin();
+        std::exit(0);
     }
 };
 

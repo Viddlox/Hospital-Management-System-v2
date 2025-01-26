@@ -56,7 +56,7 @@ private:
 	}
 	bool deleteUserFromFile(const std::string &userId)
 	{
-		for (int i = 0; i <= static_cast<int>(Role::Patient); i++)
+		for (int i = 0; i <= static_cast<int>(Role::Admin); i++)
 		{
 			Role role = static_cast<Role>(i);
 			std::string roleStr = User::getRoleToString(role);
@@ -81,6 +81,45 @@ private:
 	}
 	void populateUserMap()
 	{
+		for (int i = 0; i <= static_cast<int>(Role::Admin); i++)
+		{
+			Role role = static_cast<Role>(i);
+			std::string roleStr = User::getRoleToString(role);
+			std::string filePath = "db/" + roleStr + "/";
+
+			if (!std::filesystem::exists(filePath))
+			{
+				std::cerr << "Directory not found: " << filePath << std::endl;
+				continue;
+			}
+			for (const auto &entry : std::filesystem::directory_iterator(filePath))
+			{
+				if (entry.path().extension() == ".json")
+				{
+					std::ifstream file(entry.path());
+					if (file.is_open())
+					{
+						nlohmann::json j;
+						file >> j;
+						file.close();
+						std::shared_ptr<User> user = nullptr;
+
+						if (roleStr == "admin")
+						{
+							user = std::make_shared<Admin>();
+							from_json(j, *std::dynamic_pointer_cast<Admin>(user));
+							userMap[j["id"]] = std::dynamic_pointer_cast<Admin>(user);
+						}
+						else if (roleStr == "patient")
+						{
+							user = std::make_shared<Patient>();
+							from_json(j, *std::dynamic_pointer_cast<Patient>(user));
+							userMap[j["id"]] = std::dynamic_pointer_cast<Patient>(user);
+						}
+					}
+				}
+			}
+		}
 	}
 
 public:
