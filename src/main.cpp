@@ -10,30 +10,22 @@ void signalHandler(int signum)
         return;
     }
     isCleaningUp.store(true);
-    if (EventManager::instance)
-    {
-        EventManager::instance->exit();
-    }
+    EventManager &eventManager = EventManager::getInstance();
+    eventManager.exit();
     exit(signum);
 }
 
 int main()
 {
     signal(SIGINT, signalHandler);
-
     try
     {
-        EventManager eventManager;
-        EventManager::instance = &eventManager;
+        EventManager& eventManager = EventManager::getInstance();
         eventManager.start();
     }
     catch (const std::exception &e)
     {
         std::cerr << "Error: " << e.what() << std::endl;
-        if (EventManager::instance)
-        {
-            EventManager::instance->exit();
-        }
         return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;

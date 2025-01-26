@@ -30,7 +30,15 @@ private:
     std::thread timeThread;
     Screen screen;
     std::atomic<std::time_t> time;
-    std::shared_ptr<UserManager> userManager;
+    UserManager& userManager = UserManager::getInstance();
+
+    EventManager() : screen(Screen::Login), time(getCurrentTime()) {}
+    ~EventManager()
+    {
+        stopThreads();
+    }
+	EventManager(const EventManager &) = delete;
+	EventManager &operator=(const EventManager &) = delete;
 
     // Notification handling logic
     void handleNotifications()
@@ -173,11 +181,8 @@ private:
             std::string username = trim_whitespaces(field_buffer(fields[1], 0));
             std::string password = trim_whitespaces(field_buffer(fields[3], 0));
 
-            mvprintw(0, 0, "%s", username.c_str());
-            mvprintw(1, 0, "%s", password.c_str());
-
             // Validate user credentials
-            if (userManager->validateUser(username, password))
+            if (userManager.validateUser(username, password))
             {
                 unpost_form(form);
                 free_form(form);
@@ -235,18 +240,11 @@ private:
     }
 
 public:
-    static EventManager *instance;
-
-    EventManager() : screen(Screen::Login), time(getCurrentTime())
+    // get singleton instance
+    static EventManager &getInstance()
     {
-        instance = this;
-        userManager = std::make_shared<UserManager>();
-    }
-
-    ~EventManager()
-    {
-        stopThreads();
-        instance = nullptr;
+        static EventManager instance;
+        return instance;
     }
 
     // Switch the current screen
@@ -270,8 +268,8 @@ public:
         isRunning.store(true);
         notificationThread = std::thread(&EventManager::handleNotifications, this);
         timeThread = std::thread(&EventManager::handleTime, this);
-        if (userManager->getAdminCount() < 1)
-            userManager->createAdmin("admin", "1234");
+        if (userManager.getAdminCount() < 1)
+            userManager.createAdmin("admin", "1234");
         initScreen();
         try
         {
@@ -302,8 +300,5 @@ public:
         endwin();
     }
 };
-
-// Define the static instance pointer
-EventManager *EventManager::instance = nullptr;
 
 #endif

@@ -14,6 +14,15 @@ class UserManager
 private:
 	// in-memory storage of users as shared pointers for O(1) read/writes
 	std::unordered_map<std::string, std::shared_ptr<User>> userMap;
+
+	UserManager()
+	{
+		populateUserMap();
+	}
+	~UserManager() = default;
+	UserManager(const UserManager &) = delete;
+	UserManager &operator=(const UserManager &) = delete;
+
 	std::shared_ptr<User> getUserFromFile(const std::string &userId, const std::string &role)
 	{
 		std::shared_ptr<User> user = nullptr;
@@ -70,8 +79,18 @@ private:
 		}
 		return false;
 	}
+	void populateUserMap()
+	{
+	}
 
 public:
+	// get singleton instance
+	static UserManager &getInstance()
+	{
+		static UserManager instance;
+		return instance;
+	}
+
 	// Add record (Patient)
 	void createPatient(const std::string &username, const std::string &password, int age, const std::string &firstName,
 					   const std::string &lastName, const std::string &religion, const std::string &nationality,
