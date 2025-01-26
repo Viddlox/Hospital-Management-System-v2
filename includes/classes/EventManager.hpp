@@ -173,6 +173,9 @@ private:
             std::string username = trim_whitespaces(field_buffer(fields[1], 0));
             std::string password = trim_whitespaces(field_buffer(fields[3], 0));
 
+            mvprintw(0, 0, "%s", username.c_str());
+            mvprintw(1, 0, "%s", password.c_str());
+
             // Validate user credentials
             if (userManager->validateUser(username, password))
             {

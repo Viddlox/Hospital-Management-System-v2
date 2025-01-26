@@ -63,19 +63,19 @@ public:
         switch (role)
         {
         case Role::Admin:
-            return "Admin";
+            return "admin";
         case Role::Patient:
-            return "Patient";
+            return "patient";
         default:
-            return "User";
+            return "user";
         }
     }
 
     static Role getRoleToEnum(const std::string &role)
     {
-        if (role == "Admin")
+        if (role == "admin")
             return Role::Admin;
-        else if (role == "Patient")
+        else if (role == "patient")
             return Role::Patient;
         else
             throw std::invalid_argument("Unknown role: " + role);

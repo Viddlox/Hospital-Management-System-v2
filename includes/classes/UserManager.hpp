@@ -347,9 +347,7 @@ public:
 	bool validateUser(const std::string &username, const std::string &password)
 	{
 		auto user = getUserByUsername(username);
-		if (user && user->getPassword() == password)
-			return true;
-		return false;
+		return user && user->getPassword() == password;
 	}
 	int getAdminCount()
 	{
