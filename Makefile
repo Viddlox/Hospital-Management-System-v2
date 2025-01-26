@@ -5,6 +5,9 @@ NAME = Hospital_Management_System.exe
 CC = g++
 CFLAGS = -Wall -std=c++17 -Iincludes -Iincludes/external -Iincludes/classes -mavx2 -m64
 
+# ncurses linking flags
+LDFLAGS = -lncursesw -pthread -lformw -pedantic
+
 # Source files and object files
 SRCS = $(wildcard src/*.cpp)
 OBJ_DIR = obj
@@ -17,7 +20,7 @@ RM = rm -rf
 all: $(NAME)
 
 $(NAME): $(OBJ)
-	$(CC) $(CFLAGS) $(OBJ) -o $(NAME)
+	$(CC) $(CFLAGS) $(OBJ) -o $(NAME) $(LDFLAGS)
 
 $(OBJ_DIR)/%.o: src/%.cpp
 	@mkdir -p $(@D)

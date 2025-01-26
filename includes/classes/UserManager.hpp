@@ -143,6 +143,49 @@ public:
 		return nullptr;
 	}
 
+	// Search record by username
+	std::shared_ptr<User> getUserByUsername(const std::string &username)
+	{
+		// Check in-memory cache first
+		for (const auto &pair : userMap)
+		{
+			if (pair.second->getUsername() == username)
+			{
+				return pair.second;
+			}
+		}
+		// If not found in memory, check the folder-based database (by role)
+		for (int i = 0; i <= static_cast<int>(Role::Admin); i++)
+		{
+			Role role = static_cast<Role>(i);
+			std::string roleStr = User::getRoleToString(role);
+			std::string filePath = "db/" + roleStr + "/";
+			for (const auto &entry : std::filesystem::directory_iterator(filePath))
+			{
+				if (entry.path().extension() == ".json")
+				{
+					std::ifstream file(entry.path());
+					if (file.is_open())
+					{
+						nlohmann::json j;
+						file >> j;
+						file.close();
+
+						if (j.contains("username") && j["username"] == username)
+						{
+							auto user = getUserFromFile(j["id"], roleStr);
+							if (user)
+							{
+								return user;
+							}
+						}
+					}
+				}
+			}
+		}
+		return nullptr;
+	}
+
 	// Delete record
 	void deleteUserById(const std::string &userId)
 	{
@@ -300,6 +343,13 @@ public:
 
 		// Handle unknown roles
 		std::cerr << "Unknown role for user ID " << userId << ".\n";
+	}
+	bool validateUser(const std::string &username, const std::string &password)
+	{
+		auto user = getUserByUsername(username);
+		if (user && user->getPassword() == password)
+			return true;
+		return false;
 	}
 };
 

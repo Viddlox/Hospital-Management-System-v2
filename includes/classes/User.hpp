@@ -81,7 +81,9 @@ public:
             throw std::invalid_argument("Unknown role: " + role);
     }
 
-    std::string getId() const { return id; }
+    const std::string &getId() const { return id; }
+    const std::string &getUsername() const { return username; }
+    const std::string &getPassword() const { return password; }
     Role getRole() const { return role; }
 };
 
