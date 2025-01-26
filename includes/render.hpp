@@ -23,6 +23,19 @@
 #include <unistd.h>
 #endif
 
+class EventManager;
+class UserManager;
+
+enum class Screen
+{
+    Login,
+    Register,
+    Dashboard,
+    Roster,
+    Userbase,
+    Appointment,
+};
+
 struct Color
 {
     int primary = 1;
@@ -37,5 +50,7 @@ void initializeColors();
 void clearScrollbackBuffer();
 char* trim_whitespaces(char *str);
 void driver(int ch, FORM *form, WINDOW *win_form, FIELD **fields);
+void renderLoginScreen();
+void renderDashboardScreen();
 
 #endif
