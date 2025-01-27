@@ -9,8 +9,7 @@ class Patient : public User
 public:
     // Personal information
     int age;
-    std::string firstName;
-    std::string lastName;
+    std::string fullName;
     std::string religion;
     std::string nationality;
     std::string identityCardNumber;
@@ -29,37 +28,27 @@ public:
     int bmi;
     std::string height;
     std::string weight;
-    std::string knownAllergies;
-    std::string medicalHistory;
-    std::string familyMedicalHistory;
-    std::vector<std::string> appointments;
 
     // Default constructor
     Patient()
         : User(),
-          age(0), firstName(""), lastName(""), religion(""), nationality(""),
+          age(0), fullName(""), religion(""), nationality(""),
           identityCardNumber(""), maritalStatus(""), gender(""), race(""),
           email(""), contactNumber(""), emergencyContactNumber(""), emergencyContactName(""),
-          address(""), bmi(0), height(""), weight(""),
-          knownAllergies(""), medicalHistory(""), familyMedicalHistory(""),
-          appointments() {}
+          address(""), bmi(0), height(""), weight("") {}
 
     // Parameterized constructor
     Patient(
-        const std::string &username, const std::string &password, int age, const std::string &firstName, const std::string &lastName,
+        const std::string &username, const std::string &password, int age, const std::string &fullName,
         const std::string &religion, const std::string &nationality, const std::string &identityCardNumber,
         const std::string &maritalStatus, const std::string &gender, const std::string &race, const std::string &email,
         const std::string &contactNumber, const std::string &emergencyContactNumber, const std::string &emergencyContactName,
-        const std::string &address, int bmi, const std::string &height, const std::string &weight,
-        const std::string &knownAllergies, const std::string &medicalHistory, const std::string &familyMedicalHistory,
-        const std::vector<std::string> &appointments = {})
+        const std::string &address, int bmi, const std::string &height, const std::string &weight)
         : User(username, password, Role::Patient), // Call base class constructor
-          age(age), firstName(firstName), lastName(lastName), religion(religion), nationality(nationality),
+          age(age), fullName(fullName), religion(religion), nationality(nationality),
           identityCardNumber(identityCardNumber), maritalStatus(maritalStatus), gender(gender), race(race),
           email(email), contactNumber(contactNumber), emergencyContactNumber(emergencyContactNumber), emergencyContactName(emergencyContactName),
-          address(address), bmi(bmi), height(height), weight(weight),
-          knownAllergies(knownAllergies), medicalHistory(medicalHistory), familyMedicalHistory(familyMedicalHistory),
-          appointments(appointments)
+          address(address), bmi(bmi), height(height), weight(weight)
     {
     }
 
@@ -75,8 +64,7 @@ public:
             {"password", p.password},
             {"createdAt", p.getCreatedAt()},
             {"age", p.age},
-            {"firstName", p.firstName},
-            {"lastName", p.lastName},
+            {"fullName", p.fullName},
             {"religion", p.religion},
             {"nationality", p.nationality},
             {"identityCardNumber", p.identityCardNumber},
@@ -91,10 +79,7 @@ public:
             {"bmi", p.bmi},
             {"height", p.height},
             {"weight", p.weight},
-            {"knownAllergies", p.knownAllergies},
-            {"medicalHistory", p.medicalHistory},
-            {"familyMedicalHistory", p.familyMedicalHistory},
-            {"appointments", p.appointments}};
+        };
     }
 
     friend void from_json(const json &j, Patient &p)
@@ -104,8 +89,7 @@ public:
         p.username = j.at("username").get<std::string>();
         p.password = j.at("password").get<std::string>();
         p.age = j.at("age").get<int>();
-        p.firstName = j.at("firstName").get<std::string>();
-        p.lastName = j.at("lastName").get<std::string>();
+        p.fullName = j.at("fullName").get<std::string>();
         p.religion = j.at("religion").get<std::string>();
         p.nationality = j.at("nationality").get<std::string>();
         p.identityCardNumber = j.at("identityCardNumber").get<std::string>();
@@ -120,10 +104,6 @@ public:
         p.bmi = j.at("bmi").get<int>();
         p.height = j.at("height").get<std::string>();
         p.weight = j.at("weight").get<std::string>();
-        p.knownAllergies = j.at("knownAllergies").get<std::string>();
-        p.medicalHistory = j.at("medicalHistory").get<std::string>();
-        p.familyMedicalHistory = j.at("familyMedicalHistory").get<std::string>();
-        p.appointments = j.at("appointments").get<std::vector<std::string>>();
 
         // Deserialize createdAt as a string and convert it to time_point
         std::string createdAtStr = j.at("createdAt").get<std::string>();

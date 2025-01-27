@@ -2,13 +2,6 @@
 #include "EventManager.hpp"
 #include "UserManager.hpp"
 
-struct Color
-{
-    int primary = 1;
-    int secondary = 2;
-    int danger = 3;
-};
-
 void initializeColors()
 {
     start_color();
@@ -105,66 +98,6 @@ char *trim_whitespaces(char *str)
     return str;
 }
 
-void driver(int ch, FORM *form, WINDOW *win_form, FIELD **fields)
-{
-    switch (ch)
-    {
-    case KEY_F(2):
-        // Sync the field buffer with what's displayed
-        form_driver(form, REQ_NEXT_FIELD);
-        form_driver(form, REQ_PREV_FIELD);
-
-        // Debug: Print field values
-        move(LINES - 3, 2);
-        for (int i = 0; fields[i]; i++)
-        {
-            printw("%s", trim_whitespaces(field_buffer(fields[i], 0)));
-            if (field_opts(fields[i]) & O_ACTIVE)
-                printw("\"\t");
-            else
-                printw(": \"");
-        }
-        refresh();
-        break;
-
-    case KEY_DOWN:
-        form_driver(form, REQ_NEXT_FIELD);
-        break;
-
-    case KEY_UP:
-        form_driver(form, REQ_PREV_FIELD);
-        break;
-
-    case KEY_LEFT:
-        form_driver(form, REQ_PREV_CHAR);
-        break;
-
-    case KEY_RIGHT:
-        form_driver(form, REQ_NEXT_CHAR);
-        break;
-
-    // Delete the char before cursor
-    case KEY_BACKSPACE:
-    case 127:
-        form_driver(form, REQ_DEL_PREV);
-        break;
-
-    // Delete the char under the cursor
-    case KEY_DC:
-        form_driver(form, REQ_DEL_CHAR);
-        break;
-
-    default:
-        // Send other characters to the form driver
-        form_driver(form, ch);
-        break;
-    }
-
-    // Ensure cursor and window are updated
-    pos_form_cursor(form);
-    wrefresh(win_form);
-}
-
 std::vector<std::string> split_string(std::string toSplit, int maxLength)
 {
     std::vector<std::string> result;
@@ -231,14 +164,11 @@ void renderLoginScreen()
     wbkgd(win_body, COLOR_PAIR(colorScheme.primary));
     box(win_body, 0, 0);
     mvwprintw(win_body, 1, 2, "Login Form");
-    refresh();
-    wrefresh(win_body);
 
     // Create a subwindow inside the main window for the form
     WINDOW *win_form = derwin(win_body, 8, 48, 3, 1);
     wbkgd(win_form, COLOR_PAIR(colorScheme.primary));
     box(win_form, 0, 0);
-    wrefresh(win_form);
 
     // Create form fields
     FIELD *fields[5];
@@ -394,43 +324,348 @@ void renderControlInfo()
     delwin(win_outer);
 }
 
-void renderRegistrationScreen()
+void exitHandler()
 {
-    // Set up the screen and cursor
-    Color colorScheme;
+    EventManager &eventManager = EventManager::getInstance();
+    eventManager.exit();
+}
+
+void backHandlerRegistration(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body, Registration &reg, Color &colorScheme)
+{
+    EventManager &eventManager = EventManager::getInstance();
+
+    unpost_form(form);
+    free_form(form);
+    for (int i = 0; fields[i]; i++)
+    {
+        free_field(fields[i]);
+    }
+    wclear(win_form);
+    wclear(win_body);
+    delwin(win_form);
+    delwin(win_body);
+    clear();
+    refresh();
+
+    if (reg.currentSection == Registration::Section::personal)
+    {
+        renderRegistrationAccountSection(reg, colorScheme);
+    }
+    else if (reg.currentSection == Registration::Section::account)
+    {
+        eventManager.switchScreen(Screen::Login);
+    }
+}
+
+void driver(int ch, FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body,
+            std::function<void()> exitHandler, std::function<void()> backHandler)
+{
+    switch (ch)
+    {
+    case KEY_DOWN:
+        form_driver(form, REQ_NEXT_FIELD);
+        form_driver(form, REQ_END_LINE);
+        break;
+    case KEY_UP:
+        form_driver(form, REQ_PREV_FIELD);
+        form_driver(form, REQ_END_LINE);
+        break;
+    case KEY_LEFT:
+        form_driver(form, REQ_PREV_CHAR);
+        break;
+    case KEY_RIGHT:
+        form_driver(form, REQ_NEXT_CHAR);
+        break;
+    case KEY_BACKSPACE:
+    case 127:
+        form_driver(form, REQ_DEL_PREV);
+        break;
+    case 27: // Escape key
+        if (exitHandler)
+        {
+            exitHandler();
+        }
+        break;
+    case 2: // Custom key for "Back"
+        if (backHandler)
+        {
+            backHandler();
+        }
+        return;
+    case KEY_DC:
+        form_driver(form, REQ_DEL_CHAR);
+        break;
+    default:
+        form_driver(form, ch);
+        break;
+    }
+    wrefresh(win_form);
+}
+
+void renderRegistrationAccountSection(Registration &reg, Color &colorScheme)
+{
+    renderHeader();
+    renderControlInfo();
+
+    int baseline = 11;
+    std::string header = "Register a MedTek+ Account";
+    mvprintw(baseline, (COLS - header.length()) / 2, "%s", header.c_str());
+
+    reg.currentSection = Registration::Section::account;
     bkgd(COLOR_PAIR(colorScheme.primary));
 
-    // Header text
-    std::string header = "Register a MedTek+ User Account";
+    int outer_height = 16;
+    int outer_width = 50;
 
-    // Outer window dimensions
-    int outer_height = 16; // Height of the main window
-    int outer_width = 80;  // Width of the main window
+    int start_y = ((LINES - outer_height) / 2) + 2;
+    int start_x = (COLS - outer_width) / 2;
 
-    // Calculate the center position for the outer window
-    int start_y = (LINES - outer_height) / 2; // Center vertically
-    int start_x = (COLS - outer_width) / 2;   // Center horizontally
+    WINDOW *win_body = newwin(outer_height, outer_width, start_y, start_x);
+    wbkgd(win_body, COLOR_PAIR(colorScheme.primary));
+    box(win_body, 0, 0);
 
-    // Create the outer window
-    WINDOW *win_outer = newwin(outer_height, outer_width, start_y, start_x);
-    wbkgd(win_outer, COLOR_PAIR(colorScheme.primary));
-    box(win_outer, 0, 0);
-    mvwprintw(win_outer, 1, (outer_width - header.length()) / 2, "%s", header.c_str());
-    wrefresh(win_outer);
+    std::string subHeader = "Account Information";
+    mvwprintw(win_body, 1, (outer_width - subHeader.length()) / 2, "%s", subHeader.c_str());
 
-    // Inner window dimensions (for form placement)
-    int inner_height = outer_height - 4; // Slightly smaller than the outer window
-    int inner_width = outer_width - 4;   // Slightly smaller than the outer window
+    int inner_height = outer_height - 4;
+    int inner_width = outer_width - 4;
 
-    // Create the inner window centered inside the outer window
-    WINDOW *win_inner = derwin(win_outer, inner_height, inner_width, 2, 2);
-    wbkgd(win_inner, COLOR_PAIR(colorScheme.primary));
-    box(win_inner, 0, 0);
-    wrefresh(win_inner);
+    WINDOW *win_form = derwin(win_body, inner_height, inner_width, 2, 2);
+    wbkgd(win_form, COLOR_PAIR(colorScheme.primary));
+    box(win_form, 0, 0);
 
-    // Cleanup: Delete windows
-    delwin(win_inner);
-    delwin(win_outer);
+    FIELD *fields[11];
+    fields[0] = new_field(1, 10, 0, 1, 0, 0);  // Label: Username
+    fields[1] = new_field(1, 30, 0, 13, 0, 0); // Input: Username
+    fields[2] = new_field(1, 10, 2, 1, 0, 0);  // Label: Password
+    fields[3] = new_field(1, 30, 2, 13, 0, 0); // Input: Password
+    fields[4] = new_field(1, 10, 4, 1, 0, 0);  // Label: Email
+    fields[5] = new_field(1, 30, 4, 13, 0, 0); // Input: Email
+    fields[6] = new_field(1, 10, 6, 1, 0, 0);  // Label: Address
+    fields[7] = new_field(1, 30, 6, 13, 0, 0); // Input: Address
+    fields[8] = new_field(1, 16, 8, 1, 0, 0);  // Label: Contact Number
+    fields[9] = new_field(1, 30, 8, 13, 0, 0); // Input: Contact Number
+    fields[10] = NULL;
+
+    assert(fields[0] && fields[1] && fields[2] && fields[3] && fields[4] &&
+           fields[5] && fields[6] && fields[7] && fields[8] && fields[9]);
+
+    set_field_buffer(fields[0], 0, "Username:");
+    set_field_buffer(fields[1], 0, reg.username.c_str());
+    set_field_buffer(fields[2], 0, "Password:");
+    set_field_buffer(fields[3], 0, reg.password.c_str());
+    set_field_buffer(fields[4], 0, "Email:");
+    set_field_buffer(fields[5], 0, reg.email.c_str());
+    set_field_buffer(fields[6], 0, "Address:");
+    set_field_buffer(fields[7], 0, reg.address.c_str());
+    set_field_buffer(fields[8], 0, "Contact Num:");
+    set_field_buffer(fields[9], 0, reg.contactNumber.c_str());
+
+    // Set field options
+    for (int i = 0; fields[i]; i++)
+    {
+        if (i % 2 == 0) // Labels
+        {
+            set_field_opts(fields[i], O_VISIBLE | O_PUBLIC | O_STATIC); // Read-only
+        }
+        else // Input fields
+        {
+            set_field_opts(fields[i], O_VISIBLE | O_PUBLIC | O_EDIT | O_ACTIVE | O_AUTOSKIP);
+        }
+        set_field_back(fields[i], COLOR_PAIR(colorScheme.primary)); // Set background color
+    }
+
+    // Create and post form
+    FORM *form = new_form(fields);
+    assert(form);
+    set_form_win(form, win_form);
+    set_form_sub(form, derwin(win_form, inner_height - 2, inner_width - 2, 1, 1));
+    post_form(form);
+
+    // Refresh windows
+    wrefresh(win_body);
+    wrefresh(win_form);
+
+    // Input loop
+    int ch;
+    while ((ch = getch()) != '\n')
+    {
+        driver(
+            ch,
+            form,
+            fields,
+            win_form,
+            win_body,
+            [&]()
+            { exitHandler(); },
+            [&]()
+            { backHandlerRegistration(form, fields, win_form, win_body, reg, colorScheme); });
+    }
+
+    form_driver(form, REQ_VALIDATION);
+
+    // Extract form data
+    reg.username = trim_whitespaces(field_buffer(fields[1], 0));
+    reg.password = trim_whitespaces(field_buffer(fields[3], 0));
+    reg.email = trim_whitespaces(field_buffer(fields[5], 0));
+    reg.address = trim_whitespaces(field_buffer(fields[7], 0));
+    reg.contactNumber = trim_whitespaces(field_buffer(fields[9], 0));
+
+    // Clean up
+    unpost_form(form);
+    free_form(form);
+    for (int i = 0; fields[i]; i++)
+    {
+        free_field(fields[i]);
+    }
+    wclear(win_form);
+    wclear(win_body);
+    delwin(win_form);
+    delwin(win_body);
+    clear();
+    refresh();
+
+    renderRegistrationPersonalSection(reg, colorScheme);
+}
+
+void renderRegistrationPersonalSection(Registration &reg, Color &colorScheme)
+{
+    renderHeader();
+    renderControlInfo();
+    int baseline = 11;
+    std::string header = "Register a MedTek+ Account";
+    mvprintw(baseline, (COLS - header.length()) / 2, "%s", header.c_str());
+
+    reg.currentSection = Registration::Section::personal;
+    bkgd(COLOR_PAIR(colorScheme.primary));
+
+    int outer_height = 20;
+    int outer_width = 60;
+
+    int start_y = ((LINES - outer_height) / 2) + 4;
+    int start_x = (COLS - outer_width) / 2;
+
+    WINDOW *win_body = newwin(outer_height, outer_width, start_y, start_x);
+    wbkgd(win_body, COLOR_PAIR(colorScheme.primary));
+    box(win_body, 0, 0);
+
+    std::string subHeader = "Personal Information";
+    mvwprintw(win_body, 1, (outer_width - subHeader.length()) / 2, "%s", subHeader.c_str());
+
+    int inner_height = outer_height - 4;
+    int inner_width = outer_width - 4;
+
+    WINDOW *win_form = derwin(win_body, inner_height, inner_width, 2, 2);
+    wbkgd(win_form, COLOR_PAIR(colorScheme.primary));
+    box(win_form, 0, 0);
+
+    FIELD *fields[13];
+    fields[0] = new_field(1, 15, 0, 1, 0, 0);    // Label: fullName
+    fields[1] = new_field(1, 35, 0, 18, 0, 0);   // Input: fullName
+    fields[2] = new_field(1, 15, 2, 1, 0, 0);    // Label: identityCardNumber
+    fields[3] = new_field(1, 35, 2, 18, 0, 0);   // Input: identityCardNumber
+    fields[4] = new_field(1, 15, 4, 1, 0, 0);    // Label: height
+    fields[5] = new_field(1, 35, 4, 18, 0, 0);   // Input: height
+    fields[6] = new_field(1, 15, 6, 1, 0, 0);    // Label: weight
+    fields[7] = new_field(1, 35, 6, 18, 0, 0);   // Input: weight
+    fields[8] = new_field(1, 22, 8, 1, 0, 0);    // Label: emergencyContactNumber
+    fields[9] = new_field(1, 28, 8, 25, 0, 0);   // Input: emergencyContactNumber
+    fields[10] = new_field(1, 28, 10, 1, 0, 0);  // Label: emergencyContactName
+    fields[11] = new_field(1, 22, 10, 25, 0, 0); // Input: emergencyContactName
+    fields[12] = NULL;
+
+    assert(fields[0] && fields[1] && fields[2] && fields[3] && fields[4] &&
+           fields[5] && fields[6] && fields[7] && fields[8] && fields[9] && fields[10] && fields[11]);
+
+    set_field_buffer(fields[0], 0, "Full Name:");
+    set_field_buffer(fields[1], 0, reg.fullName.c_str());
+    set_field_buffer(fields[2], 0, "IC number:");
+    set_field_buffer(fields[3], 0, reg.identityCardNumber.c_str());
+    set_field_buffer(fields[4], 0, "Height (cm):");
+    set_field_buffer(fields[5], 0, reg.height.c_str());
+    set_field_buffer(fields[6], 0, "Weight (kg):");
+    set_field_buffer(fields[7], 0, reg.weight.c_str());
+    set_field_buffer(fields[8], 0, "Emergency Contact:");
+    set_field_buffer(fields[9], 0, reg.emergencyContactNumber.c_str());
+    set_field_buffer(fields[10], 0, "Emergency Contact Name:");
+    set_field_buffer(fields[11], 0, reg.emergencyContactName.c_str());
+
+    // Set field options
+    for (int i = 0; fields[i]; i++)
+    {
+        if (i % 2 == 0) // Labels
+        {
+            set_field_opts(fields[i], O_VISIBLE | O_PUBLIC | O_STATIC); // Read-only
+        }
+        else // Input fields
+        {
+            set_field_opts(fields[i], O_VISIBLE | O_PUBLIC | O_EDIT | O_ACTIVE | O_AUTOSKIP);
+        }
+        set_field_back(fields[i], COLOR_PAIR(colorScheme.primary)); // Set background color
+    }
+
+    // Create and post form
+    FORM *form = new_form(fields);
+    assert(form);
+    set_form_win(form, win_form);
+    set_form_sub(form, derwin(win_form, inner_height - 2, inner_width - 2, 1, 1));
+    post_form(form);
+
+    // Refresh windows
+    wrefresh(win_body);
+    wrefresh(win_form);
+
+    // Input loop
+    int ch;
+    while ((ch = getch()) != '\n')
+    {
+        driver(
+            ch,
+            form,
+            fields,
+            win_form,
+            win_body,
+            [&]()
+            { exitHandler(); },
+            [&]()
+            { backHandlerRegistration(form, fields, win_form, win_body, reg, colorScheme); });
+    }
+
+    form_driver(form, REQ_VALIDATION);
+
+    // Extract form data
+    reg.fullName = trim_whitespaces(field_buffer(fields[1], 0));
+    reg.identityCardNumber = trim_whitespaces(field_buffer(fields[3], 0));
+    reg.height = trim_whitespaces(field_buffer(fields[5], 0));
+    reg.weight = trim_whitespaces(field_buffer(fields[7], 0));
+    reg.emergencyContactNumber = trim_whitespaces(field_buffer(fields[9], 0));
+    reg.emergencyContactName = trim_whitespaces(field_buffer(fields[11], 0));
+
+    // Clean up
+    unpost_form(form);
+    free_form(form);
+    for (int i = 0; fields[i]; i++)
+    {
+        free_field(fields[i]);
+    }
+    wclear(win_form);
+    wclear(win_body);
+    delwin(win_form);
+    delwin(win_body);
+    clear();
+    refresh();
+}
+
+void renderRegistrationSelectionSection(Registration &reg, Color &colorScheme)
+{
+    
+}
+
+void renderRegistrationScreen(Registration &reg)
+{
+    Color colorScheme;
+    bkgd(COLOR_PAIR(colorScheme.primary));
+    renderRegistrationAccountSection(reg, colorScheme);
 }
 
 void renderDashboardScreen()

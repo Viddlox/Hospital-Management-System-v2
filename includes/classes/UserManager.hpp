@@ -131,19 +131,17 @@ public:
 	}
 
 	// Add record (Patient)
-	void createPatient(const std::string &username, const std::string &password, int age, const std::string &firstName,
-					   const std::string &lastName, const std::string &religion, const std::string &nationality,
+	void createPatient(const std::string &username, const std::string &password, int age, const std::string &fullName,
+					   const std::string &religion, const std::string &nationality,
 					   const std::string &identityCardNumber, const std::string &maritalStatus, const std::string &gender,
 					   const std::string &race, const std::string &email, const std::string &contactNumber,
 					   const std::string &emergencyContactNumber, const std::string &emergencyContactName, const std::string &address,
-					   int bmi, const std::string &height, const std::string &weight, const std::string &knownAllergies,
-					   const std::string &medicalHistory, const std::string &familyMedicalHistory,
-					   const std::vector<std::string> &appointments = {})
+					   int bmi, const std::string &height, const std::string &weight)
 	{
 		std::shared_ptr<Patient> newPatient = std::make_shared<Patient>(
-			username, password, age, firstName, lastName, religion, nationality, identityCardNumber,
+			username, password, age, fullName, religion, nationality, identityCardNumber,
 			maritalStatus, gender, race, email, contactNumber, emergencyContactNumber, emergencyContactName,
-			address, bmi, height, weight, knownAllergies, medicalHistory, familyMedicalHistory, appointments);
+			address, bmi, height, weight);
 
 		auto result = userMap.insert({newPatient->getId(), newPatient});
 		if (!result.second)
@@ -328,10 +326,8 @@ public:
 						 std::cerr << "Invalid value for 'age': " << value << "\n";
 					 }
 				 }},
-				{"firstName", [&patient](const std::string &value)
-				 { patient->firstName = value; }},
-				{"lastName", [&patient](const std::string &value)
-				 { patient->lastName = value; }},
+				{"fullName", [&patient](const std::string &value)
+				 { patient->fullName = value; }},
 				{"religion", [&patient](const std::string &value)
 				 { patient->religion = value; }},
 				{"nationality", [&patient](const std::string &value)
@@ -372,18 +368,7 @@ public:
 				{"height", [&patient](const std::string &value)
 				 { patient->height = value; }},
 				{"weight", [&patient](const std::string &value)
-				 { patient->weight = value; }},
-				{"knownAllergies", [&patient](const std::string &value)
-				 { patient->knownAllergies = value; }},
-				{"medicalHistory", [&patient](const std::string &value)
-				 { patient->medicalHistory = value; }},
-				{"familyMedicalHistory", [&patient](const std::string &value)
-				 { patient->familyMedicalHistory = value; }},
-				{"appointments", [&patient](const std::string &value)
-				 {
-					 patient->appointments = split(value, ',');
-				 }},
-			};
+				 { patient->weight = value; }}};
 
 			auto it = patientUpdates.find(fieldName);
 			if (it != patientUpdates.end())

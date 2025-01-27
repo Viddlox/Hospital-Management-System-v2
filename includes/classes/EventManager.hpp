@@ -11,6 +11,7 @@
 #include "render.hpp"
 #include "UserManager.hpp"
 
+
 class EventManager
 {
 private:
@@ -23,6 +24,7 @@ private:
     Screen screen;
     std::atomic<std::time_t> time;
     UserManager &userManager = UserManager::getInstance();
+    Registration reg;
 
     EventManager() : screen(Screen::Login), time(getCurrentTime()) {}
     ~EventManager()
@@ -77,8 +79,7 @@ private:
             renderDashboardScreen();
             break;
         case Screen::Register:
-            renderControlInfo();
-            renderRegistrationScreen();
+            renderRegistrationScreen(reg);
             break;
         case Screen::Roster:
             break;
