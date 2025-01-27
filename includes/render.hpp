@@ -48,5 +48,6 @@ void driver(int ch, FORM *form, WINDOW *win_form, FIELD **fields);
 void renderLoginScreen();
 void renderDashboardScreen();
 void renderRegistrationScreen();
+void renderControlInfo();
 
 #endif

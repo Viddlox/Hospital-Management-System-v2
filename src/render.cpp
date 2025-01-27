@@ -45,8 +45,8 @@ void renderHeader()
     mvwprintw(header_win, 7, 1, " | $$ \\/  | $$|  $$$$$$$|  $$$$$$$   | $$   |  $$$$$$$| $$ \\  $$        |__/  ");
     mvwprintw(header_win, 8, 1, " |__/     |__/ \\_______/ \\_______/   |__/    \\_______/|__/  \\__/            ");
 
-    wbkgd(header_win, COLOR_PAIR(colorScheme.primary));
     refresh();
+    wbkgd(header_win, COLOR_PAIR(colorScheme.primary));
     wrefresh(header_win);
     delwin(header_win);
 }
@@ -216,7 +216,7 @@ void renderLoginScreen()
     bkgd(COLOR_PAIR(colorScheme.primary));
 
     // Render subheaders
-    std::string subHeader1 = "Welcome to MedTek+ CLI";
+    std::string subHeader1 = "Welcome to MedTek+ TUI";
     std::string subHeader2 = "Please enter your login credentials below";
 
     int baseline = 11;
@@ -324,7 +324,7 @@ void renderLoginScreen()
             delwin(win_body);
             delwin(win_footer);
             eventManager.switchScreen(Screen::Register);
-            break;
+            return;
         case KEY_DC:
             form_driver(form, REQ_DEL_CHAR);
             break;
@@ -363,15 +363,74 @@ void renderLoginScreen()
     }
 }
 
+void renderControlInfo()
+{
+    Color colorScheme;
+
+    std::string header = "Controls";
+    std::string back = "1) Ctrl+b (back)";
+    std::string exit = "2) Esc/Ctrl+c (exit)";
+
+    int outer_width = 24;
+    int outer_height = 8;
+
+    int inner_width = 22;
+    int inner_height = 4;
+
+    WINDOW *win_outer = newwin(outer_height, outer_width, 1, 1);
+    wbkgd(win_outer, COLOR_PAIR(colorScheme.primary));
+    box(win_outer, 0, 0);
+    mvwprintw(win_outer, 1, (outer_width - header.length()) / 2, "%s", header.c_str());
+    wrefresh(win_outer);
+
+    WINDOW *win_inner = derwin(win_outer, inner_height, inner_width, 2, 1);
+    wbkgd(win_inner, COLOR_PAIR(colorScheme.primary));
+    box(win_inner, 0, 0);
+    mvwprintw(win_inner, 1, 1, "%s", back.c_str());
+    mvwprintw(win_inner, 2, 1, "%s", exit.c_str());
+    wrefresh(win_inner);
+
+    delwin(win_inner);
+    delwin(win_outer);
+}
+
 void renderRegistrationScreen()
 {
+    // Set up the screen and cursor
     Color colorScheme;
     bkgd(COLOR_PAIR(colorScheme.primary));
 
-    std::string subHeader = "Register a MedTek user account";
+    // Header text
+    std::string header = "Register a MedTek+ User Account";
 
-    int baseline = 11;
-    mvprintw(baseline, (COLS - subHeader.length()) / 2, "%s", subHeader.c_str());
+    // Outer window dimensions
+    int outer_height = 16; // Height of the main window
+    int outer_width = 80;  // Width of the main window
+
+    // Calculate the center position for the outer window
+    int start_y = (LINES - outer_height) / 2; // Center vertically
+    int start_x = (COLS - outer_width) / 2;   // Center horizontally
+
+    // Create the outer window
+    WINDOW *win_outer = newwin(outer_height, outer_width, start_y, start_x);
+    wbkgd(win_outer, COLOR_PAIR(colorScheme.primary));
+    box(win_outer, 0, 0);
+    mvwprintw(win_outer, 1, (outer_width - header.length()) / 2, "%s", header.c_str());
+    wrefresh(win_outer);
+
+    // Inner window dimensions (for form placement)
+    int inner_height = outer_height - 4; // Slightly smaller than the outer window
+    int inner_width = outer_width - 4;   // Slightly smaller than the outer window
+
+    // Create the inner window centered inside the outer window
+    WINDOW *win_inner = derwin(win_outer, inner_height, inner_width, 2, 2);
+    wbkgd(win_inner, COLOR_PAIR(colorScheme.primary));
+    box(win_inner, 0, 0);
+    wrefresh(win_inner);
+
+    // Cleanup: Delete windows
+    delwin(win_inner);
+    delwin(win_outer);
 }
 
 void renderDashboardScreen()

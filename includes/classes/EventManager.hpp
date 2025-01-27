@@ -63,16 +63,21 @@ private:
     // Render the UI layout
     void renderLayout()
     {
-        renderHeader();
+        refresh();
         switch (screen)
         {
         case Screen::Login:
+            renderHeader();
+            renderControlInfo();
             renderLoginScreen();
             break;
         case Screen::Dashboard:
+            renderHeader();
+            renderControlInfo();
             renderDashboardScreen();
             break;
         case Screen::Register:
+            renderControlInfo();
             renderRegistrationScreen();
             break;
         case Screen::Roster:
