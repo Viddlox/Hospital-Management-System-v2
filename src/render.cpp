@@ -10,10 +10,11 @@ void initializeColors()
     init_color(COLOR_GREEN, 0, 1000, 0);
     init_color(COLOR_BLACK, 0, 0, 0);
     init_color(COLOR_RED, 1000, 0, 0);
+    init_color(4, 1000, 500, 0); // Custom amber color
 
     // Define color pairs
     init_pair(1, COLOR_GREEN, COLOR_BLACK);
-    init_pair(2, COLOR_WHITE, COLOR_BLACK);
+    init_pair(2, COLOR_BLACK, 4);
     init_pair(3, COLOR_RED, COLOR_BLACK);
 }
 
@@ -286,7 +287,7 @@ void renderLoginScreen()
     else
     {
         attron(COLOR_PAIR(colorScheme.danger));
-        mvprintw(LINES - 2, (COLS - 30) / 2, "Invalid credentials, try again.");
+        mvprintw(LINES - 2, (COLS - 40) / 2, "Invalid credentials, please try again");
         refresh();
         std::this_thread::sleep_for(std::chrono::seconds(2));
         clear();
@@ -300,14 +301,15 @@ void renderControlInfo()
     std::string header = "Controls";
     std::string back = "1) Ctrl+b (back)";
     std::string exit = "2) Esc/Ctrl+c (exit)";
+    std::string enter = "3) Enter (proceed)";
 
     int outer_width = 24;
-    int outer_height = 8;
+    int outer_height = 10;
 
     int inner_width = 22;
-    int inner_height = 4;
+    int inner_height = 6;
 
-    WINDOW *win_outer = newwin(outer_height, outer_width, 1, 1);
+    WINDOW *win_outer = newwin(outer_height, outer_width, 0, 1);
     wbkgd(win_outer, COLOR_PAIR(colorScheme.primary));
     box(win_outer, 0, 0);
     mvwprintw(win_outer, 1, (outer_width - header.length()) / 2, "%s", header.c_str());
@@ -318,6 +320,7 @@ void renderControlInfo()
     box(win_inner, 0, 0);
     mvwprintw(win_inner, 1, 1, "%s", back.c_str());
     mvwprintw(win_inner, 2, 1, "%s", exit.c_str());
+    mvwprintw(win_inner, 3, 1, "%s", enter.c_str());
     wrefresh(win_inner);
 
     delwin(win_inner);
@@ -329,16 +332,22 @@ void exitHandler()
     EventManager &eventManager = EventManager::getInstance();
     eventManager.exit();
 }
-
 void backHandlerRegistration(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body, Registration &reg, Color &colorScheme)
 {
     EventManager &eventManager = EventManager::getInstance();
+    Registration::Section section = reg.currentSection;
 
-    unpost_form(form);
-    free_form(form);
-    for (int i = 0; fields[i]; i++)
+    if (form)
     {
-        free_field(fields[i]);
+        unpost_form(form);
+        free_form(form);
+    }
+    if (fields)
+    {
+        for (int i = 0; fields[i]; i++)
+        {
+            free_field(fields[i]);
+        }
     }
     wclear(win_form);
     wclear(win_body);
@@ -347,18 +356,25 @@ void backHandlerRegistration(FORM *form, FIELD **fields, WINDOW *win_form, WINDO
     clear();
     refresh();
 
-    if (reg.currentSection == Registration::Section::personal)
+    switch (section)
     {
+    case Registration::Section::selection:
+        renderRegistrationPersonalSection(reg, colorScheme);
+        break;
+    case Registration::Section::personal:
         renderRegistrationAccountSection(reg, colorScheme);
-    }
-    else if (reg.currentSection == Registration::Section::account)
-    {
+        break;
+    case Registration::Section::account:
         eventManager.switchScreen(Screen::Login);
+        reg.reset();
+        break;
+    default:
+        break;
     }
 }
 
-void driver(int ch, FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body,
-            std::function<void()> exitHandler, std::function<void()> backHandler)
+void driver_form(int ch, FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body,
+                 std::function<void()> exitHandler, std::function<void()> backHandler)
 {
     switch (ch)
     {
@@ -402,10 +418,28 @@ void driver(int ch, FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_bo
     wrefresh(win_form);
 }
 
+bool validateFields(FIELD **fields, Color &colorScheme)
+{
+    for (int i = 0; fields[i]; i++)
+    {
+        if (i % 2 == 0)
+        {
+            continue;
+        }
+        std::string field_value = trim_whitespaces(field_buffer(fields[i], 0));
+        if (field_value.empty())
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 void renderRegistrationAccountSection(Registration &reg, Color &colorScheme)
 {
     renderHeader();
     renderControlInfo();
+    curs_set(1);
 
     int baseline = 11;
     std::string header = "Register a MedTek+ Account";
@@ -415,7 +449,7 @@ void renderRegistrationAccountSection(Registration &reg, Color &colorScheme)
     bkgd(COLOR_PAIR(colorScheme.primary));
 
     int outer_height = 16;
-    int outer_width = 50;
+    int outer_width = 60;
 
     int start_y = ((LINES - outer_height) / 2) + 2;
     int start_x = (COLS - outer_width) / 2;
@@ -444,7 +478,7 @@ void renderRegistrationAccountSection(Registration &reg, Color &colorScheme)
     fields[6] = new_field(1, 10, 6, 1, 0, 0);  // Label: Address
     fields[7] = new_field(1, 30, 6, 13, 0, 0); // Input: Address
     fields[8] = new_field(1, 16, 8, 1, 0, 0);  // Label: Contact Number
-    fields[9] = new_field(1, 30, 8, 13, 0, 0); // Input: Contact Number
+    fields[9] = new_field(1, 30, 8, 20, 0, 0); // Input: Contact Number
     fields[10] = NULL;
 
     assert(fields[0] && fields[1] && fields[2] && fields[3] && fields[4] &&
@@ -458,18 +492,18 @@ void renderRegistrationAccountSection(Registration &reg, Color &colorScheme)
     set_field_buffer(fields[5], 0, reg.email.c_str());
     set_field_buffer(fields[6], 0, "Address:");
     set_field_buffer(fields[7], 0, reg.address.c_str());
-    set_field_buffer(fields[8], 0, "Contact Num:");
+    set_field_buffer(fields[8], 0, "Contact Number:");
     set_field_buffer(fields[9], 0, reg.contactNumber.c_str());
 
     // Set field options
     for (int i = 0; fields[i]; i++)
     {
-        if (i % 2 == 0) // Labels
-        {
+        if (i % 2 == 0)
+        {                                                               // Labels
             set_field_opts(fields[i], O_VISIBLE | O_PUBLIC | O_STATIC); // Read-only
         }
-        else // Input fields
-        {
+        else
+        { // Input fields
             set_field_opts(fields[i], O_VISIBLE | O_PUBLIC | O_EDIT | O_ACTIVE | O_AUTOSKIP);
         }
         set_field_back(fields[i], COLOR_PAIR(colorScheme.primary)); // Set background color
@@ -486,20 +520,47 @@ void renderRegistrationAccountSection(Registration &reg, Color &colorScheme)
     wrefresh(win_body);
     wrefresh(win_form);
 
+    // Create a dedicated error window
+    int error_win_height = 1;
+    int error_win_width = 32;
+    int error_win_y = LINES - 2;
+    int error_win_x = (COLS - error_win_width) / 2;
+
+    WINDOW *error_win = newwin(error_win_height, error_win_width, error_win_y, error_win_x);
+    wbkgd(error_win, COLOR_PAIR(colorScheme.danger));
+
     // Input loop
+    bool done = false;
     int ch;
-    while ((ch = getch()) != '\n')
+
+    while (!done)
     {
-        driver(
-            ch,
-            form,
-            fields,
-            win_form,
-            win_body,
-            [&]()
-            { exitHandler(); },
-            [&]()
-            { backHandlerRegistration(form, fields, win_form, win_body, reg, colorScheme); });
+        while ((ch = getch()) != '\n')
+        {
+            driver_form(
+                ch,
+                form,
+                fields,
+                win_form,
+                win_body,
+                [&]()
+                { exitHandler(); },
+                [&]()
+                { backHandlerRegistration(form, fields, win_form, win_body, reg, colorScheme); });
+        }
+        form_driver(form, REQ_VALIDATION);
+        if (!validateFields(fields, colorScheme))
+        {
+            mvwprintw(error_win, 0, 0, "Please fill all required fields");
+            wrefresh(error_win);
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+            werase(error_win);
+            wrefresh(error_win);
+        }
+        else
+        {
+            done = true;
+        }
     }
 
     form_driver(form, REQ_VALIDATION);
@@ -522,6 +583,7 @@ void renderRegistrationAccountSection(Registration &reg, Color &colorScheme)
     wclear(win_body);
     delwin(win_form);
     delwin(win_body);
+    delwin(error_win);
     clear();
     refresh();
 
@@ -532,6 +594,8 @@ void renderRegistrationPersonalSection(Registration &reg, Color &colorScheme)
 {
     renderHeader();
     renderControlInfo();
+    curs_set(1);
+
     int baseline = 11;
     std::string header = "Register a MedTek+ Account";
     mvprintw(baseline, (COLS - header.length()) / 2, "%s", header.c_str());
@@ -568,10 +632,10 @@ void renderRegistrationPersonalSection(Registration &reg, Color &colorScheme)
     fields[5] = new_field(1, 35, 4, 18, 0, 0);   // Input: height
     fields[6] = new_field(1, 15, 6, 1, 0, 0);    // Label: weight
     fields[7] = new_field(1, 35, 6, 18, 0, 0);   // Input: weight
-    fields[8] = new_field(1, 22, 8, 1, 0, 0);    // Label: emergencyContactNumber
-    fields[9] = new_field(1, 28, 8, 25, 0, 0);   // Input: emergencyContactNumber
+    fields[8] = new_field(1, 30, 8, 1, 0, 0);    // Label: emergencyContactNumber
+    fields[9] = new_field(1, 22, 8, 28, 0, 0);   // Input: emergencyContactNumber
     fields[10] = new_field(1, 28, 10, 1, 0, 0);  // Label: emergencyContactName
-    fields[11] = new_field(1, 22, 10, 25, 0, 0); // Input: emergencyContactName
+    fields[11] = new_field(1, 22, 10, 28, 0, 0); // Input: emergencyContactName
     fields[12] = NULL;
 
     assert(fields[0] && fields[1] && fields[2] && fields[3] && fields[4] &&
@@ -585,7 +649,7 @@ void renderRegistrationPersonalSection(Registration &reg, Color &colorScheme)
     set_field_buffer(fields[5], 0, reg.height.c_str());
     set_field_buffer(fields[6], 0, "Weight (kg):");
     set_field_buffer(fields[7], 0, reg.weight.c_str());
-    set_field_buffer(fields[8], 0, "Emergency Contact:");
+    set_field_buffer(fields[8], 0, "Emergency Contact Number:");
     set_field_buffer(fields[9], 0, reg.emergencyContactNumber.c_str());
     set_field_buffer(fields[10], 0, "Emergency Contact Name:");
     set_field_buffer(fields[11], 0, reg.emergencyContactName.c_str());
@@ -615,20 +679,47 @@ void renderRegistrationPersonalSection(Registration &reg, Color &colorScheme)
     wrefresh(win_body);
     wrefresh(win_form);
 
+    // Create a dedicated error window
+    int error_win_height = 1;
+    int error_win_width = 32;
+    int error_win_y = LINES - 2;
+    int error_win_x = (COLS - error_win_width) / 2;
+
+    WINDOW *error_win = newwin(error_win_height, error_win_width, error_win_y, error_win_x);
+    wbkgd(error_win, COLOR_PAIR(colorScheme.danger));
+
     // Input loop
+    bool done = false;
     int ch;
-    while ((ch = getch()) != '\n')
+
+    while (!done)
     {
-        driver(
-            ch,
-            form,
-            fields,
-            win_form,
-            win_body,
-            [&]()
-            { exitHandler(); },
-            [&]()
-            { backHandlerRegistration(form, fields, win_form, win_body, reg, colorScheme); });
+        while ((ch = getch()) != '\n')
+        {
+            driver_form(
+                ch,
+                form,
+                fields,
+                win_form,
+                win_body,
+                [&]()
+                { exitHandler(); },
+                [&]()
+                { backHandlerRegistration(form, fields, win_form, win_body, reg, colorScheme); });
+        }
+        form_driver(form, REQ_VALIDATION);
+        if (!validateFields(fields, colorScheme))
+        {
+            mvwprintw(error_win, 0, 0, "Please fill all required fields");
+            wrefresh(error_win);
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+            werase(error_win);
+            wrefresh(error_win);
+        }
+        else
+        {
+            done = true;
+        }
     }
 
     form_driver(form, REQ_VALIDATION);
@@ -652,13 +743,146 @@ void renderRegistrationPersonalSection(Registration &reg, Color &colorScheme)
     wclear(win_body);
     delwin(win_form);
     delwin(win_body);
+    delwin(error_win);
     clear();
     refresh();
+
+    renderRegistrationSelectionSection(reg, colorScheme);
+}
+
+// Function to render a custom menu
+void renderMenu(WINDOW *win, const std::vector<std::string> &items, const std::string &title, int y_offset, int &selected_index)
+{
+    int start_x = 2; // Start rendering menu items from column 2
+    int start_y = y_offset;
+
+    // Display the menu title
+    mvwprintw(win, start_y - 1, start_x, "%s:", title.c_str());
+
+    // Display menu items
+    for (int i = 0; i < static_cast<int>(items.size()); ++i)
+    {
+        if (i == selected_index)
+        {
+            wattron(win, A_REVERSE); // Turn off highlighting
+        }
+        mvwprintw(win, start_y, start_x, "%s", items[i].c_str());
+        if (i == selected_index)
+        {
+            wattroff(win, A_REVERSE); // Turn off highlighting
+        }
+        start_x += items[i].length() + 2; // Add spacing between items
+    }
 }
 
 void renderRegistrationSelectionSection(Registration &reg, Color &colorScheme)
 {
-    
+    renderHeader();
+    renderControlInfo();
+    reg.currentSection = Registration::Section::selection;
+
+    bkgd(COLOR_PAIR(colorScheme.primary));
+
+    int baseline = 11;
+    std::string header = "Register a MedTek+ Account";
+    mvprintw(baseline, (COLS - header.length()) / 2, "%s", header.c_str());
+    refresh();
+
+    int outer_height = 20;
+    int outer_width = 60;
+
+    int start_y = ((LINES - outer_height) / 2) + 4;
+    int start_x = (COLS - outer_width) / 2;
+
+    // Create the main window (win_body)
+    WINDOW *win_body = newwin(outer_height, outer_width, start_y, start_x);
+    wbkgd(win_body, COLOR_PAIR(colorScheme.primary));
+    box(win_body, 0, 0);
+
+    // Draw the subheader on win_body
+    std::string subHeader = "Personal Information (Continued)";
+    mvwprintw(win_body, 1, (outer_width - subHeader.length()) / 2, "%s", subHeader.c_str());
+    wrefresh(win_body); // Refresh win_body to show the subheader
+
+    int inner_height = outer_height - 4;
+    int inner_width = outer_width - 4;
+
+    // Create the subwindow (win_form) inside win_body
+    WINDOW *win_form = derwin(win_body, inner_height, inner_width, 2, 2);
+    wbkgd(win_form, COLOR_PAIR(colorScheme.primary));
+    box(win_form, 0, 0);
+    wrefresh(win_form); // Refresh win_form to show the box
+
+    bool done = false;
+    keypad(win_form, TRUE);
+    curs_set(0);
+
+    while (!done)
+    {
+        // Clear win_form and redraw its border
+        werase(win_form);
+        box(win_form, 0, 0);
+
+        // Update registration data with selected values
+        reg.gender = reg.menuArrs[0][reg.selectedIndices[0]];
+        reg.religion = reg.menuArrs[1][reg.selectedIndices[1]];
+        reg.race = reg.menuArrs[2][reg.selectedIndices[2]];
+        reg.maritalStatus = reg.menuArrs[3][reg.selectedIndices[3]];
+        reg.nationality = reg.menuArrs[4][reg.selectedIndices[4]];
+
+        int y_offset = 2;
+
+        // Render all menus
+        for (int i = 0; i < static_cast<int>(reg.menuArrs.size()); ++i)
+        {
+            if (i == reg.currentMenu)
+            {
+                wattron(win_form, A_BOLD); // Highlight the current menu
+            }
+            renderMenu(win_form, reg.menuArrs[i], reg.labelArr[i], y_offset, reg.selectedIndices[i]);
+            if (i == reg.currentMenu)
+            {
+                wattroff(win_form, A_BOLD); // Turn off highlighting
+            }
+            y_offset += 3; // Move down for the next menu
+        }
+
+        wrefresh(win_form); // Refresh win_form to show the menus
+
+        // Handle user input
+        int ch = wgetch(win_form);
+        switch (ch)
+        {
+        case KEY_UP:
+            if (reg.currentMenu > 0)
+                reg.currentMenu--; // Move up to previous menu
+            break;
+        case KEY_DOWN:
+            if (reg.currentMenu < static_cast<int>(reg.menuArrs.size() - 1))
+                reg.currentMenu++; // Move down to next menu
+            break;
+        case KEY_LEFT:
+            if (reg.selectedIndices[reg.currentMenu] > 0)
+                reg.selectedIndices[reg.currentMenu]--; // Move left in current menu
+            break;
+        case KEY_RIGHT:
+            if (reg.selectedIndices[reg.currentMenu] < static_cast<int>(reg.menuArrs[reg.currentMenu].size() - 1))
+                reg.selectedIndices[reg.currentMenu]++; // Move right in current menu
+            break;
+        case 10: // Enter key confirms selection and exits
+            done = true;
+            break;
+        case 2: // Custom key for "Back"
+            backHandlerRegistration(nullptr, nullptr, win_form, win_body, reg, colorScheme);
+            break;
+        }
+    }
+
+    // Clean up
+    delwin(win_form);
+    delwin(win_body);
+    clear();
+    refresh();
 }
 
 void renderRegistrationScreen(Registration &reg)

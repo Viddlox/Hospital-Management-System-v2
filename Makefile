@@ -6,7 +6,7 @@ CC = g++
 CFLAGS = -Wall -std=c++17 -Iincludes -Iincludes/external -Iincludes/classes -mavx2 -m64
 
 # ncurses linking flags
-LDFLAGS = -lncursesw -pthread -lformw -pedantic
+LDFLAGS = -lncursesw -pthread -lformw -lmenuw -pedantic
 
 # Source files and object files
 SRCS = $(wildcard src/*.cpp)
