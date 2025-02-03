@@ -24,6 +24,7 @@ private:
     std::atomic<std::time_t> time;
     UserManager &userManager = UserManager::getInstance();
     Registration reg;
+    Dashboard dash;
 
     EventManager() : screen(Screen::Login), time(getCurrentTime()) {}
     ~EventManager()
@@ -75,16 +76,16 @@ private:
         case Screen::Dashboard:
             renderHeader();
             renderControlInfo();
-            renderDashboardScreen();
+            renderDashboardScreen(dash);
             break;
         case Screen::Register:
             renderRegistrationScreen(reg);
             break;
         case Screen::Roster:
             break;
-        case Screen::Userbase:
+        case Screen::Profile:
             break;
-        case Screen::Appointment:
+        case Screen::Userbase:
             break;
         default:
             break;

@@ -38,8 +38,8 @@ enum class Screen
     Register,
     Dashboard,
     Roster,
+    Profile,
     Userbase,
-    Appointment,
 };
 
 struct Color
@@ -149,13 +149,31 @@ struct Registration
     }
 };
 
+struct Dashboard
+{
+    std::vector<std::string> patientOptionsArr = {
+        "Roster",
+        "Profile",
+        "Log Out"};
+    std::vector<std::string> adminOptionsArr = {
+        "Roster",
+        "Userbase",
+        "Profile",
+        "Log Out"};
+    int selectedIndex = 0;
+    void reset()
+    {
+        selectedIndex = 0;
+    }
+};
+
 void renderHeader();
 void clearScreen();
 void initializeColors();
 void clearScrollbackBuffer();
 char *trim_whitespaces(char *str);
 void renderLoginScreen();
-void renderDashboardScreen();
+void renderDashboardScreen(Dashboard &dash);
 void renderRegistrationScreen(Registration &reg);
 void renderControlInfo();
 void renderRegistrationAccountSection(Registration &reg, Color &colorScheme);
@@ -163,7 +181,7 @@ void renderRegistrationPersonalSection(Registration &reg, Color &colorScheme);
 void renderRegistrationSelectionSection(Registration &reg, Color &colorScheme);
 void backHandlerRegistration(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body, Registration &reg, Color &colorScheme);
 void exitHandler();
-void renderMenu(WINDOW *win, const std::vector<std::string> &items, const std::string &title, int y_offset, int &selected_index);
+void renderHorizontalMenuStack(WINDOW *win, const std::vector<std::string> &items, const std::string &title, int y_offset, int &selected_index);
 bool validateFields(FIELD **fields, Color &colorScheme);
 int calculateAge(const std::string &identityCardNumber);
 double calculateBMI(const std::string &weight, const std::string &height);

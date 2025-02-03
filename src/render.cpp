@@ -132,6 +132,7 @@ void renderLoginScreen()
     UserManager &userManager = UserManager::getInstance();
     Color colorScheme;
     curs_set(1);
+    userManager.setCurrentUser(nullptr);
 
     bkgd(COLOR_PAIR(colorScheme.primary));
 
@@ -150,7 +151,8 @@ void renderLoginScreen()
 
     wbkgd(win_body, COLOR_PAIR(colorScheme.primary));
     box(win_body, 0, 0);
-    mvwprintw(win_body, 1, 2, "Login Form");
+    std::string loginForm = "Login Form";
+    mvwprintw(win_body, 1, (50 - loginForm.length()) / 2, "%s", loginForm.c_str());
 
     // Create a subwindow inside the main window for the form
     WINDOW *win_form = derwin(win_body, 8, 48, 3, 1);
@@ -737,7 +739,7 @@ void renderRegistrationPersonalSection(Registration &reg, Color &colorScheme)
 }
 
 // Function to render a custom menu
-void renderMenu(WINDOW *win, const std::vector<std::string> &items, const std::string &title, int y_offset, int &selected_index)
+void renderHorizontalMenuStack(WINDOW *win, const std::vector<std::string> &items, const std::string &title, int y_offset, int &selected_index)
 {
     int start_x = 2; // Start rendering menu items from column 2
     int start_y = y_offset;
@@ -859,7 +861,7 @@ void renderRegistrationSelectionSection(Registration &reg, Color &colorScheme)
 
     // Create a dedicated status window
     int status_win_height = 5;
-    int status_win_width = 32;
+    int status_win_width = 33;
     int status_win_y = LINES - 6;
     int status_win_x = (COLS - status_win_width) / 2;
 
@@ -892,7 +894,7 @@ void renderRegistrationSelectionSection(Registration &reg, Color &colorScheme)
             {
                 wattron(win_form, A_BOLD); // Highlight the current menu
             }
-            renderMenu(win_form, reg.menuArrs[i], reg.labelArr[i], y_offset, reg.selectedIndices[i]);
+            renderHorizontalMenuStack(win_form, reg.menuArrs[i], reg.labelArr[i], y_offset, reg.selectedIndices[i]);
             if (i == reg.currentMenu)
             {
                 wattroff(win_form, A_BOLD); // Turn off highlighting
@@ -967,13 +969,120 @@ void renderRegistrationScreen(Registration &reg)
     renderRegistrationAccountSection(reg, colorScheme);
 }
 
-void renderDashboardScreen()
+void renderDashboardScreen(Dashboard &dash)
 {
     Color colorScheme;
+    EventManager &eventManager = EventManager::getInstance();
+    UserManager &userManager = UserManager::getInstance();
+    auto currentUser = userManager.getCurrentUser();
     bkgd(COLOR_PAIR(colorScheme.primary));
 
-    std::string subHeader = "Dashboard";
+    std::string header = "Dashboard";
+    std::string currentlyLoggedUser = "Currently logged in as " + currentUser->username;
 
     int baseline = 11;
-    mvprintw(baseline, (COLS - subHeader.length()) / 2, "%s", subHeader.c_str());
+    mvprintw(baseline, (COLS - header.length()) / 2, "%s", header.c_str());
+    mvprintw(baseline + 2, (COLS - currentlyLoggedUser.length()) / 2, "%s", currentlyLoggedUser.c_str());
+    refresh();
+
+    int outer_height = 16;
+    int outer_width = 40;
+
+    int start_y = ((LINES - outer_height) / 2) + 4;
+    int start_x = (COLS - outer_width) / 2;
+
+    // Create the main window (win_body)
+    WINDOW *win_body = newwin(outer_height, outer_width, start_y, start_x);
+    wbkgd(win_body, COLOR_PAIR(colorScheme.primary));
+    box(win_body, 0, 0);
+
+    // Draw the subheader on win_body
+    std::string subHeader = "Main Menu";
+    mvwprintw(win_body, 1, (outer_width - subHeader.length()) / 2, "%s", subHeader.c_str());
+    wrefresh(win_body); // Refresh win_body to show the subheader
+
+    int inner_height = outer_height - 4;
+    int inner_width = outer_width - 4;
+
+    // Create the subwindow (win_form) inside win_body
+    WINDOW *win_form = derwin(win_body, inner_height, inner_width, 2, 2);
+    wbkgd(win_form, COLOR_PAIR(colorScheme.primary));
+    box(win_form, 0, 0);
+    wrefresh(win_form); // Refresh win_form to show the box
+
+    bool done = false;
+    keypad(win_form, TRUE);
+    curs_set(0);
+
+    while (!done)
+    {
+        // Clear the previous menu options
+        werase(win_form);
+        box(win_form, 0, 0);
+
+        std::vector<std::string> menuOptions = currentUser->getRoleToString(currentUser->role) == "patient" ? dash.patientOptionsArr : dash.adminOptionsArr;
+
+        // Render menu options
+        for (int i = 0; i < static_cast<int>(menuOptions.size()); ++i)
+        {
+            // Calculate the horizontal position to center the option
+            int optionLength = menuOptions[i].length();
+            int xPos = (inner_width - optionLength) / 2;
+
+            if (i == dash.selectedIndex)
+            {
+                wattron(win_form, A_REVERSE); // Highlight the selected option
+            }
+
+            mvwprintw(win_form, 2 + (i * 2), xPos, "%s", menuOptions[i].c_str());
+
+            if (i == dash.selectedIndex)
+            {
+                wattroff(win_form, A_REVERSE); // Turn off highlighting
+            }
+        }
+
+        wrefresh(win_form); // Refresh win_form to show the updated menu
+
+        // Handle user input
+        int ch = wgetch(win_form);
+        switch (ch)
+        {
+        case KEY_UP:
+            dash.selectedIndex--;
+            if (dash.selectedIndex < 0)
+            {
+                dash.selectedIndex = menuOptions.size() - 1; // Wrap around to the last option
+            }
+            break;
+        case KEY_DOWN:
+            dash.selectedIndex++;
+            if (dash.selectedIndex >= static_cast<int>(menuOptions.size()))
+            {
+                dash.selectedIndex = 0; // Wrap around to the first option
+            }
+            break;
+        case 10: // Enter key confirms selection and exits
+            done = true;
+            break;
+        case 2: // Custom key for "Back"
+            wclear(win_form);
+            wclear(win_body);
+            delwin(win_form);
+            delwin(win_body);
+            clear();
+            refresh();
+            dash.reset();
+            eventManager.switchScreen(Screen::Login);
+            return;
+        }
+    }
+
+    // Clean up windows
+    wclear(win_form);
+    wclear(win_body);
+    delwin(win_form);
+    delwin(win_body);
+    clear();
+    refresh();
 }

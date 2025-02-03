@@ -14,6 +14,7 @@ class UserManager
 private:
 	// in-memory storage of users as shared pointers for O(1) read/writes
 	std::unordered_map<std::string, std::shared_ptr<User>> userMap;
+	std::shared_ptr<User> currentUser;
 
 	UserManager()
 	{
@@ -390,6 +391,7 @@ public:
 	bool validateUser(const std::string &username, const std::string &password)
 	{
 		auto user = getUserByUsername(username);
+		setCurrentUser(user);
 		return user && user->getPassword() == password;
 	}
 	int getAdminCount()
@@ -408,6 +410,14 @@ public:
 			}
 		}
 		return count;
+	}
+	void setCurrentUser(std::shared_ptr<User> user)
+	{
+		currentUser = user;
+	}
+	const std::shared_ptr<User> &getCurrentUser() const
+	{
+		return currentUser;
 	}
 };
 
