@@ -19,6 +19,7 @@
 #include <ncursesw/menu.h>
 #include <unordered_map>
 #include <cctype>
+#include <math.h>
 
 #include <csignal>
 #if defined(_WIN32) || defined(_WIN64)
@@ -149,7 +150,6 @@ struct Registration
 };
 
 void renderHeader();
-void renderTime(std::time_t time);
 void clearScreen();
 void initializeColors();
 void clearScrollbackBuffer();
@@ -165,5 +165,8 @@ void backHandlerRegistration(FORM *form, FIELD **fields, WINDOW *win_form, WINDO
 void exitHandler();
 void renderMenu(WINDOW *win, const std::vector<std::string> &items, const std::string &title, int y_offset, int &selected_index);
 bool validateFields(FIELD **fields, Color &colorScheme);
+int calculateAge(const std::string &identityCardNumber);
+double calculateBMI(const std::string &weight, const std::string &height);
+bool submitRegistration(Registration &reg, Color &colorScheme);
 
 #endif

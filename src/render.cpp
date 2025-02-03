@@ -45,21 +45,6 @@ void renderHeader()
     delwin(header_win);
 }
 
-void renderTime(std::time_t time)
-{
-    std::string timeStr = std::ctime(&time);
-    timeStr.pop_back();
-
-    Color colorScheme;
-    attron(COLOR_PAIR(colorScheme.primary));
-
-    int row = 11;
-    int col = (COLS - 81) / 2;
-
-    mvprintw(row, col, "%s", timeStr.c_str());
-    refresh();
-}
-
 void clearScreen()
 {
 #ifdef _WIN32
@@ -146,6 +131,7 @@ void renderLoginScreen()
     EventManager &eventManager = EventManager::getInstance();
     UserManager &userManager = UserManager::getInstance();
     Color colorScheme;
+    curs_set(1);
 
     bkgd(COLOR_PAIR(colorScheme.primary));
 
@@ -365,8 +351,8 @@ void backHandlerRegistration(FORM *form, FIELD **fields, WINDOW *win_form, WINDO
         renderRegistrationAccountSection(reg, colorScheme);
         break;
     case Registration::Section::account:
-        eventManager.switchScreen(Screen::Login);
         reg.reset();
+        eventManager.switchScreen(Screen::Login);
         break;
     default:
         break;
@@ -775,6 +761,64 @@ void renderMenu(WINDOW *win, const std::vector<std::string> &items, const std::s
     }
 }
 
+int calculateAge(const std::string &identityCardNumber)
+{
+    // Extract year, month, and day
+    int year = std::stoi(identityCardNumber.substr(0, 2));
+    int month = std::stoi(identityCardNumber.substr(2, 2));
+    int day = std::stoi(identityCardNumber.substr(4, 2));
+
+    // Get the current date
+    time_t now = time(0);
+    tm *localTime = localtime(&now);
+    int currentYear = 1900 + localTime->tm_year;
+    int currentMonth = 1 + localTime->tm_mon;
+    int currentDay = localTime->tm_mday;
+
+    // Determine the full year (assuming IC numbers use 1900s and 2000s)
+    if (year >= 0 && year <= 24)
+    { // Adjust based on reasonable birth years
+        year += 2000;
+    }
+    else
+    {
+        year += 1900;
+    }
+
+    // Calculate age
+    int age = currentYear - year;
+    if (currentMonth < month || (currentMonth == month && currentDay < day))
+    {
+        age--; // Adjust if birthday hasn't occurred yet this year
+    }
+
+    return age;
+}
+
+double calculateBMI(const std::string &weight, const std::string &height)
+{
+    return std::stod(weight) / pow((std::stod(height) / 100.0), 2);
+}
+
+bool submitRegistration(Registration &reg, Color &colorScheme)
+{
+    try
+    {
+        UserManager &userManager = UserManager::getInstance();
+        userManager.createPatient(reg.username, reg.password, calculateAge(reg.identityCardNumber), reg.fullName,
+                                  reg.religion, reg.nationality, reg.identityCardNumber, reg.maritalStatus,
+                                  reg.gender, reg.race, reg.email, reg.contactNumber, reg.emergencyContactNumber,
+                                  reg.emergencyContactName, reg.address, calculateBMI(reg.weight, reg.height), reg.height, reg.weight);
+        return true;
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "Error registering new patient" << e.what() << std::endl;
+        return false;
+    }
+    return false;
+}
+
 void renderRegistrationSelectionSection(Registration &reg, Color &colorScheme)
 {
     renderHeader();
@@ -812,6 +856,15 @@ void renderRegistrationSelectionSection(Registration &reg, Color &colorScheme)
     wbkgd(win_form, COLOR_PAIR(colorScheme.primary));
     box(win_form, 0, 0);
     wrefresh(win_form); // Refresh win_form to show the box
+
+    // Create a dedicated status window
+    int status_win_height = 5;
+    int status_win_width = 32;
+    int status_win_y = LINES - 6;
+    int status_win_x = (COLS - status_win_width) / 2;
+
+    WINDOW *status_win = newwin(status_win_height, status_win_width, status_win_y, status_win_x);
+    box(status_win, 0, 0);
 
     bool done = false;
     keypad(win_form, TRUE);
@@ -878,11 +931,33 @@ void renderRegistrationSelectionSection(Registration &reg, Color &colorScheme)
         }
     }
 
+    if (submitRegistration(reg, colorScheme))
+    {
+        wbkgd(status_win, COLOR_PAIR(colorScheme.primary));
+        printCentered(status_win, 1, "Registration SUCCESS! You will be redirected to the login page shortly.");
+        wrefresh(status_win);
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+        werase(status_win);
+        wrefresh(status_win);
+    }
+    else
+    {
+        wbkgd(status_win, COLOR_PAIR(colorScheme.danger));
+        printCentered(status_win, 1, "Registration FAILED! Please try again later.");
+        wrefresh(status_win);
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+        werase(status_win);
+        wrefresh(status_win);
+    }
     // Clean up
     delwin(win_form);
     delwin(win_body);
+    delwin(status_win);
     clear();
     refresh();
+    reg.reset();
+    EventManager &eventManager = EventManager::getInstance();
+    eventManager.switchScreen(Screen::Login);
 }
 
 void renderRegistrationScreen(Registration &reg)

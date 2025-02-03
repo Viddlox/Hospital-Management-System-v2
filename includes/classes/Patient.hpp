@@ -25,7 +25,7 @@ public:
     std::string address;
 
     // Medical information
-    int bmi;
+    double bmi;
     std::string height;
     std::string weight;
 
@@ -43,7 +43,7 @@ public:
         const std::string &religion, const std::string &nationality, const std::string &identityCardNumber,
         const std::string &maritalStatus, const std::string &gender, const std::string &race, const std::string &email,
         const std::string &contactNumber, const std::string &emergencyContactNumber, const std::string &emergencyContactName,
-        const std::string &address, int bmi, const std::string &height, const std::string &weight)
+        const std::string &address, double bmi, const std::string &height, const std::string &weight)
         : User(username, password, Role::Patient), // Call base class constructor
           age(age), fullName(fullName), religion(religion), nationality(nationality),
           identityCardNumber(identityCardNumber), maritalStatus(maritalStatus), gender(gender), race(race),
@@ -101,7 +101,7 @@ public:
         p.emergencyContactName = j.at("emergencyContactName").get<std::string>();
         p.email = j.at("email").get<std::string>();
         p.address = j.at("address").get<std::string>();
-        p.bmi = j.at("bmi").get<int>();
+        p.bmi = j.at("bmi").get<double>();
         p.height = j.at("height").get<std::string>();
         p.weight = j.at("weight").get<std::string>();
 
@@ -138,7 +138,6 @@ public:
         {
             file << j.dump(4); // Pretty print with 4 spaces
             file.close();
-            std::cout << "Patient saved to file: " << filePath << std::endl;
         }
         else
         {

@@ -11,7 +11,6 @@
 #include "render.hpp"
 #include "UserManager.hpp"
 
-
 class EventManager
 {
 private:
@@ -57,15 +56,15 @@ private:
     {
         while (isRunning.load())
         {
+            time.store(getCurrentTime(), std::memory_order_relaxed);
             std::this_thread::sleep_for(std::chrono::seconds(1));
-            time.store(getCurrentTime(), std::memory_order_relaxed); // Using memory_order_relaxed for simple updates
         }
     }
 
     // Render the UI layout
     void renderLayout()
     {
-        refresh();
+        wrefresh(stdscr);
         switch (screen)
         {
         case Screen::Login:
@@ -145,9 +144,10 @@ public:
         isRunning.store(true);
         notificationThread = std::thread(&EventManager::handleNotifications, this);
         timeThread = std::thread(&EventManager::handleTime, this);
+        initScreen();
+
         if (userManager.getAdminCount() < 1)
             userManager.createAdmin("admin", "1234");
-        initScreen();
         try
         {
             while (isRunning.load())

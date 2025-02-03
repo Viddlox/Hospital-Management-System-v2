@@ -56,11 +56,11 @@ private:
 	}
 	bool deleteUserFromFile(const std::string &userId)
 	{
-		for (int i = 0; i <= static_cast<int>(Role::Admin); i++)
+		std::vector<Role> roles = {Role::Admin, Role::Patient, Role::User};
+		for (const auto &role : roles)
 		{
-			Role role = static_cast<Role>(i);
 			std::string roleStr = User::getRoleToString(role);
-			std::string filePath = "db/" + roleStr + "/" + userId + ".json";
+			std::string filePath = "db/" + roleStr + "/";
 
 			if (fs::exists(filePath))
 			{
@@ -81,9 +81,9 @@ private:
 	}
 	void populateUserMap()
 	{
-		for (int i = 0; i <= static_cast<int>(Role::Admin); i++)
+		std::vector<Role> roles = {Role::Admin, Role::Patient, Role::User};
+		for (const auto &role : roles)
 		{
-			Role role = static_cast<Role>(i);
 			std::string roleStr = User::getRoleToString(role);
 			std::string filePath = "db/" + roleStr + "/";
 
@@ -136,7 +136,7 @@ public:
 					   const std::string &identityCardNumber, const std::string &maritalStatus, const std::string &gender,
 					   const std::string &race, const std::string &email, const std::string &contactNumber,
 					   const std::string &emergencyContactNumber, const std::string &emergencyContactName, const std::string &address,
-					   int bmi, const std::string &height, const std::string &weight)
+					   double bmi, const std::string &height, const std::string &weight)
 	{
 		std::shared_ptr<Patient> newPatient = std::make_shared<Patient>(
 			username, password, age, fullName, religion, nationality, identityCardNumber,
@@ -151,7 +151,6 @@ public:
 		}
 
 		newPatient->saveToFile();
-		std::cout << "Patient added successfully.\n";
 	}
 
 	// Add record (Admin)
@@ -211,11 +210,12 @@ public:
 			}
 		}
 		// If not found in memory, check the folder-based database (by role)
-		for (int i = 0; i <= static_cast<int>(Role::Admin); i++)
+		std::vector<Role> roles = {Role::Admin, Role::Patient, Role::User};
+		for (const auto &role : roles)
 		{
-			Role role = static_cast<Role>(i);
 			std::string roleStr = User::getRoleToString(role);
 			std::string filePath = "db/" + roleStr + "/";
+
 			for (const auto &entry : std::filesystem::directory_iterator(filePath))
 			{
 				if (entry.path().extension() == ".json")
@@ -358,7 +358,7 @@ public:
 				 {
 					 try
 					 {
-						 patient->bmi = std::stoi(value);
+						 patient->bmi = std::stod(value);
 					 }
 					 catch (const std::exception &e)
 					 {
