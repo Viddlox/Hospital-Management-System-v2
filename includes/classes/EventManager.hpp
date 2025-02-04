@@ -57,7 +57,10 @@ private:
     {
         while (isRunning.load())
         {
-            time.store(getCurrentTime(), std::memory_order_relaxed);
+            if (screen == Screen::Dashboard)
+            {
+                renderTime(getCurrentTime());
+            }
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
     }
@@ -69,19 +72,24 @@ private:
         switch (screen)
         {
         case Screen::Login:
+            curs_set(1);
             renderHeader();
             renderControlInfo();
             renderLoginScreen();
             break;
         case Screen::Dashboard:
+            curs_set(0);
             renderHeader();
             renderControlInfo();
             renderDashboardScreen(dash);
             break;
         case Screen::Register:
+            curs_set(1);
             renderRegistrationScreen(reg);
             break;
         case Screen::Roster:
+            break;
+        case Screen::Appointments:
             break;
         case Screen::Profile:
             break;

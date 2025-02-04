@@ -217,27 +217,35 @@ public:
 			std::string roleStr = User::getRoleToString(role);
 			std::string filePath = "db/" + roleStr + "/";
 
-			for (const auto &entry : std::filesystem::directory_iterator(filePath))
+			try
 			{
-				if (entry.path().extension() == ".json")
+				for (const auto &entry : std::filesystem::directory_iterator(filePath))
 				{
-					std::ifstream file(entry.path());
-					if (file.is_open())
+					if (entry.path().extension() == ".json")
 					{
-						nlohmann::json j;
-						file >> j;
-						file.close();
-
-						if (j.contains("username") && j["username"] == username)
+						std::ifstream file(entry.path());
+						if (file.is_open())
 						{
-							auto user = getUserFromFile(j["id"], roleStr);
-							if (user)
+							nlohmann::json j;
+							file >> j;
+							file.close();
+
+							if (j.contains("username") && j["username"] == username)
 							{
-								return user;
+								auto user = getUserFromFile(j["id"], roleStr);
+								if (user)
+								{
+									return user;
+								}
 							}
 						}
 					}
 				}
+			}
+			catch (const std::exception &e)
+			{
+
+				return nullptr;
 			}
 		}
 		return nullptr;

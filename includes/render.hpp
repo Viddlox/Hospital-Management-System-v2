@@ -40,6 +40,7 @@ enum class Screen
     Roster,
     Profile,
     Userbase,
+    Appointments
 };
 
 struct Color
@@ -153,6 +154,7 @@ struct Dashboard
 {
     std::vector<std::string> patientOptionsArr = {
         "Roster",
+        "Appointments",
         "Profile",
         "Log Out"};
     std::vector<std::string> adminOptionsArr = {
@@ -186,5 +188,7 @@ bool validateFields(FIELD **fields, Color &colorScheme);
 int calculateAge(const std::string &identityCardNumber);
 double calculateBMI(const std::string &weight, const std::string &height);
 bool submitRegistration(Registration &reg, Color &colorScheme);
+void handleDashboardOptions(Dashboard &dash, std::string &roleStr);
+void renderTime(std::time_t time);
 
 #endif

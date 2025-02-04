@@ -131,7 +131,6 @@ void renderLoginScreen()
     EventManager &eventManager = EventManager::getInstance();
     UserManager &userManager = UserManager::getInstance();
     Color colorScheme;
-    curs_set(1);
     userManager.setCurrentUser(nullptr);
 
     bkgd(COLOR_PAIR(colorScheme.primary));
@@ -427,7 +426,6 @@ void renderRegistrationAccountSection(Registration &reg, Color &colorScheme)
 {
     renderHeader();
     renderControlInfo();
-    curs_set(1);
 
     int baseline = 11;
     std::string header = "Register a MedTek+ Account";
@@ -582,7 +580,6 @@ void renderRegistrationPersonalSection(Registration &reg, Color &colorScheme)
 {
     renderHeader();
     renderControlInfo();
-    curs_set(1);
 
     int baseline = 11;
     std::string header = "Register a MedTek+ Account";
@@ -969,6 +966,41 @@ void renderRegistrationScreen(Registration &reg)
     renderRegistrationAccountSection(reg, colorScheme);
 }
 
+void handleDashboardOptions(Dashboard &dash, std::string &roleStr)
+{
+    EventManager &eventManager = EventManager::getInstance();
+    switch (dash.selectedIndex)
+    {
+    case 0:
+        eventManager.switchScreen(Screen::Roster);
+        break;
+    case 1:
+        eventManager.switchScreen(roleStr == "patient" ? Screen::Appointments : Screen::Userbase);
+        break;
+    case 2:
+        eventManager.switchScreen(Screen::Profile);
+        break;
+    default:
+        break;
+    }
+}
+
+void renderTime(std::time_t time)
+{
+    int row = 11;
+    int col = 1;
+
+    std::string timeStr = std::ctime(&time);
+    timeStr.pop_back();
+
+    Color colorScheme;
+    attron(COLOR_PAIR(colorScheme.primary));
+    mvprintw(row, col, "%s", timeStr.c_str());
+    attroff(COLOR_PAIR(colorScheme.primary));
+    refresh();
+}
+
+
 void renderDashboardScreen(Dashboard &dash)
 {
     Color colorScheme;
@@ -1020,7 +1052,8 @@ void renderDashboardScreen(Dashboard &dash)
         werase(win_form);
         box(win_form, 0, 0);
 
-        std::vector<std::string> menuOptions = currentUser->getRoleToString(currentUser->role) == "patient" ? dash.patientOptionsArr : dash.adminOptionsArr;
+        std::string roleStr = currentUser->getRoleToString(currentUser->role);
+        std::vector<std::string> menuOptions = roleStr == "patient" ? dash.patientOptionsArr : dash.adminOptionsArr;
 
         // Render menu options
         for (int i = 0; i < static_cast<int>(menuOptions.size()); ++i)
@@ -1063,18 +1096,15 @@ void renderDashboardScreen(Dashboard &dash)
             }
             break;
         case 10: // Enter key confirms selection and exits
+            handleDashboardOptions(dash, roleStr);
             done = true;
             break;
-        case 2: // Custom key for "Back"
-            wclear(win_form);
-            wclear(win_body);
-            delwin(win_form);
-            delwin(win_body);
-            clear();
-            refresh();
-            dash.reset();
-            eventManager.switchScreen(Screen::Login);
-            return;
+        case 27:
+            exitHandler();
+            break;
+        case 2:
+            done = true;
+            break;
         }
     }
 
@@ -1085,4 +1115,6 @@ void renderDashboardScreen(Dashboard &dash)
     delwin(win_body);
     clear();
     refresh();
+    dash.reset();
+    eventManager.switchScreen(Screen::Login);
 }
