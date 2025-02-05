@@ -285,7 +285,7 @@ void renderControlInfo()
 {
     Color colorScheme;
 
-    std::string header = "Controls";
+    std::string header = "Main Controls";
     std::string back = "1) Ctrl+b (back)";
     std::string exit = "2) Esc/Ctrl+c (exit)";
     std::string enter = "3) Enter (proceed)";
@@ -972,12 +972,9 @@ void handleDashboardOptions(Dashboard &dash, std::string &roleStr)
     switch (dash.selectedIndex)
     {
     case 0:
-        eventManager.switchScreen(Screen::Roster);
+        eventManager.switchScreen(roleStr == "patient" ? Screen::Appointments : Screen::Database);
         break;
     case 1:
-        eventManager.switchScreen(roleStr == "patient" ? Screen::Appointments : Screen::Userbase);
-        break;
-    case 2:
         eventManager.switchScreen(Screen::Profile);
         break;
     default:
@@ -999,7 +996,6 @@ void renderTime(std::time_t time)
     attroff(COLOR_PAIR(colorScheme.primary));
     refresh();
 }
-
 
 void renderDashboardScreen(Dashboard &dash)
 {
@@ -1117,4 +1113,47 @@ void renderDashboardScreen(Dashboard &dash)
     refresh();
     dash.reset();
     eventManager.switchScreen(Screen::Login);
+}
+
+void renderDatabaseControlInfo(Database &db, Color &colorScheme)
+{
+    std::string header = "Database Controls";
+    int outer_width = 32;
+    int outer_height = 10;
+
+    int inner_width = 30;
+    int inner_height = 8;
+
+    WINDOW *win_outer = newwin(outer_height, outer_width, 12, 1);
+    wbkgd(win_outer, COLOR_PAIR(colorScheme.primary));
+    box(win_outer, 0, 0);
+    mvwprintw(win_outer, 1, (outer_width - header.length()) / 2, "%s", header.c_str());
+    wrefresh(win_outer);
+
+    WINDOW *win_inner = derwin(win_outer, inner_height, inner_width, 2, 1);
+    wbkgd(win_inner, COLOR_PAIR(colorScheme.primary));
+    box(win_inner, 0, 0);
+
+    int y_offset = 0;
+    if (db.currentFilter == Database::Filter::patient)
+    {
+        for (int i = 0; i < static_cast<int>(db.patientDatabaseControlsArr.size()); i++)
+        {
+            mvwprintw(win_inner, ++y_offset, (inner_width - db.patientDatabaseControlsArr[i].length()) / 2, "%s", db.patientDatabaseControlsArr[i].c_str());
+        }
+    }
+    else
+    {
+        for (int i = 0; i < static_cast<int>(db.adminDatabaseControlsArr.size()); i++)
+        {
+            mvwprintw(win_inner, ++y_offset, (inner_width - db.adminDatabaseControlsArr[i].length()) / 2, "%s", db.adminDatabaseControlsArr[i].c_str());
+        }
+    }
+    wrefresh(win_inner);
+    delwin(win_inner);
+    delwin(win_outer);
+}
+
+void renderDatabaseScreen(Database &db)
+{
 }

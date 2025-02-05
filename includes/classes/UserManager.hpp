@@ -427,6 +427,34 @@ public:
 	{
 		return currentUser;
 	}
+	std::vector<std::string> getAdminUsernames()
+	{
+		std::vector<std::string> adminUsernames;
+
+		for (const auto &pair : userMap)
+		{
+			const std::shared_ptr<User> &userPtr = pair.second;
+			if (userPtr && userPtr->role == Role::Admin)
+			{
+				adminUsernames.push_back(userPtr->getUsername());
+			}
+		}
+		return adminUsernames;
+	}
+	std::vector<std::string> getPatientUsernames()
+	{
+		std::vector<std::string> patientUsernames;
+
+		for (const auto &pair : userMap)
+		{
+			const std::shared_ptr<User> &userPtr = pair.second;
+			if (userPtr && userPtr->role == Role::Patient)
+			{
+				patientUsernames.push_back(userPtr->getUsername());
+			}
+		}
+		return patientUsernames;
+	}
 };
 
 #endif

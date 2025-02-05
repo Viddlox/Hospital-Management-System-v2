@@ -17,7 +17,6 @@
 #include <vector>
 #include <sstream>
 #include <ncursesw/menu.h>
-#include <unordered_map>
 #include <cctype>
 #include <math.h>
 
@@ -37,9 +36,8 @@ enum class Screen
     Login,
     Register,
     Dashboard,
-    Roster,
     Profile,
-    Userbase,
+    Database,
     Appointments
 };
 
@@ -153,12 +151,10 @@ struct Registration
 struct Dashboard
 {
     std::vector<std::string> patientOptionsArr = {
-        "Roster",
         "Appointments",
         "Profile",
         "Log Out"};
     std::vector<std::string> adminOptionsArr = {
-        "Roster",
         "Userbase",
         "Profile",
         "Log Out"};
@@ -166,6 +162,37 @@ struct Dashboard
     void reset()
     {
         selectedIndex = 0;
+    }
+};
+
+struct Database
+{
+    std::vector<std::string> patientDatabaseControlsArr = {
+        "(1) Create new patient",
+        "(2) Switch to admin database",
+        "(←) Previous page",
+        "(→) Next page"};
+    std::vector<std::string> adminDatabaseControlsArr = {
+        "(1) Create new admin",
+        "(2) Switch to patient database",
+        "(←) Previous page",
+        "(→) Next page"};
+    std::vector<std::string> recordOptionsArr = {
+        "View record",
+        "Update record",
+        "Delete record"
+    };
+    enum class Filter
+    {
+        admin,
+        patient,
+    };
+    int currentPage = 0;
+    Filter currentFilter = Filter::patient;
+    void reset()
+    {
+        currentPage = 0;
+        currentFilter = Filter::patient;
     }
 };
 
@@ -190,5 +217,6 @@ double calculateBMI(const std::string &weight, const std::string &height);
 bool submitRegistration(Registration &reg, Color &colorScheme);
 void handleDashboardOptions(Dashboard &dash, std::string &roleStr);
 void renderTime(std::time_t time);
+void renderDatabaseScreen(Database &db);
 
 #endif

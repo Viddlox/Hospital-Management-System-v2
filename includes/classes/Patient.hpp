@@ -1,8 +1,11 @@
 #ifndef PATIENT_H
 #define PATIENT_H
 
+#include <unordered_map>
+
 #include "Utils.hpp"
 #include "User.hpp"
+#include "appointment.hpp"
 
 class Patient : public User
 {
@@ -28,6 +31,7 @@ public:
     double bmi;
     std::string height;
     std::string weight;
+    std::vector<Appointment> appointments;
 
     // Default constructor
     Patient()
@@ -35,7 +39,7 @@ public:
           age(0), fullName(""), religion(""), nationality(""),
           identityCardNumber(""), maritalStatus(""), gender(""), race(""),
           email(""), contactNumber(""), emergencyContactNumber(""), emergencyContactName(""),
-          address(""), bmi(0), height(""), weight("") {}
+          address(""), bmi(0), height(""), weight(""), appointments({}) {}
 
     // Parameterized constructor
     Patient(
@@ -43,12 +47,12 @@ public:
         const std::string &religion, const std::string &nationality, const std::string &identityCardNumber,
         const std::string &maritalStatus, const std::string &gender, const std::string &race, const std::string &email,
         const std::string &contactNumber, const std::string &emergencyContactNumber, const std::string &emergencyContactName,
-        const std::string &address, double bmi, const std::string &height, const std::string &weight)
+        const std::string &address, double bmi, const std::string &height, const std::string &weight, const std::vector<Appointment> appointments = {})
         : User(username, password, Role::Patient), // Call base class constructor
           age(age), fullName(fullName), religion(religion), nationality(nationality),
           identityCardNumber(identityCardNumber), maritalStatus(maritalStatus), gender(gender), race(race),
           email(email), contactNumber(contactNumber), emergencyContactNumber(emergencyContactNumber), emergencyContactName(emergencyContactName),
-          address(address), bmi(bmi), height(height), weight(weight)
+          address(address), bmi(bmi), height(height), weight(weight), appointments(appointments)
     {
     }
 
@@ -79,7 +83,7 @@ public:
             {"bmi", p.bmi},
             {"height", p.height},
             {"weight", p.weight},
-        };
+            {"appointments", p.appointments}};
     }
 
     friend void from_json(const json &j, Patient &p)
@@ -104,6 +108,7 @@ public:
         p.bmi = j.at("bmi").get<double>();
         p.height = j.at("height").get<std::string>();
         p.weight = j.at("weight").get<std::string>();
+        p.appointments = j.at("appointments").get<std::vector<Appointment>>();
 
         // Deserialize createdAt as a string and convert it to time_point
         std::string createdAtStr = j.at("createdAt").get<std::string>();

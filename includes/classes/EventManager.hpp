@@ -25,6 +25,7 @@ private:
     UserManager &userManager = UserManager::getInstance();
     Registration reg;
     Dashboard dash;
+    Database db;
 
     EventManager() : screen(Screen::Login), time(getCurrentTime()) {}
     ~EventManager()
@@ -87,13 +88,13 @@ private:
             curs_set(1);
             renderRegistrationScreen(reg);
             break;
-        case Screen::Roster:
+        case Screen::Database:
+            curs_set(1);
+            renderDatabaseScreen(db);
             break;
         case Screen::Appointments:
             break;
         case Screen::Profile:
-            break;
-        case Screen::Userbase:
             break;
         default:
             break;
