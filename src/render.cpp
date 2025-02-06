@@ -289,12 +289,13 @@ void renderControlInfo()
     std::string back = "1) Ctrl+b (back)";
     std::string exit = "2) Esc/Ctrl+c (exit)";
     std::string enter = "3) Enter (proceed)";
+    std::string navigate = "4) Arrow keys (navigate)";
 
-    int outer_width = 24;
-    int outer_height = 10;
+    int outer_width = 28;
+    int outer_height = 11;
 
-    int inner_width = 22;
-    int inner_height = 6;
+    int inner_width = 26;
+    int inner_height = 7;
 
     WINDOW *win_outer = newwin(outer_height, outer_width, 0, 1);
     wbkgd(win_outer, COLOR_PAIR(colorScheme.primary));
@@ -308,6 +309,7 @@ void renderControlInfo()
     mvwprintw(win_inner, 1, 1, "%s", back.c_str());
     mvwprintw(win_inner, 2, 1, "%s", exit.c_str());
     mvwprintw(win_inner, 3, 1, "%s", enter.c_str());
+    mvwprintw(win_inner, 4, 1, "%s", navigate.c_str());
     wrefresh(win_inner);
 
     delwin(win_inner);
@@ -736,9 +738,8 @@ void renderRegistrationPersonalSection(Registration &reg, Color &colorScheme)
 }
 
 // Function to render a custom menu
-void renderHorizontalMenuStack(WINDOW *win, const std::vector<std::string> &items, const std::string &title, int y_offset, int &selected_index)
+void renderHorizontalMenuStack(WINDOW *win, const std::vector<std::string> &items, const std::string &title, int y_offset, int &selected_index, int start_x)
 {
-    int start_x = 2; // Start rendering menu items from column 2
     int start_y = y_offset;
 
     // Display the menu title
@@ -891,7 +892,7 @@ void renderRegistrationSelectionSection(Registration &reg, Color &colorScheme)
             {
                 wattron(win_form, A_BOLD); // Highlight the current menu
             }
-            renderHorizontalMenuStack(win_form, reg.menuArrs[i], reg.labelArr[i], y_offset, reg.selectedIndices[i]);
+            renderHorizontalMenuStack(win_form, reg.menuArrs[i], reg.labelArr[i], y_offset, reg.selectedIndices[i], 2);
             if (i == reg.currentMenu)
             {
                 wattroff(win_form, A_BOLD); // Turn off highlighting
@@ -966,22 +967,6 @@ void renderRegistrationScreen(Registration &reg)
     renderRegistrationAccountSection(reg, colorScheme);
 }
 
-void handleDashboardOptions(Dashboard &dash, std::string &roleStr)
-{
-    EventManager &eventManager = EventManager::getInstance();
-    switch (dash.selectedIndex)
-    {
-    case 0:
-        eventManager.switchScreen(roleStr == "patient" ? Screen::Appointments : Screen::Database);
-        break;
-    case 1:
-        eventManager.switchScreen(Screen::Profile);
-        break;
-    default:
-        break;
-    }
-}
-
 void renderTime(std::time_t time)
 {
     int row = 11;
@@ -995,6 +980,28 @@ void renderTime(std::time_t time)
     mvprintw(row, col, "%s", timeStr.c_str());
     attroff(COLOR_PAIR(colorScheme.primary));
     refresh();
+}
+
+void handleDashboardOptions(Dashboard &dash, std::string &roleStr)
+{
+    EventManager &eventManager = EventManager::getInstance();
+    switch (dash.selectedIndex)
+    {
+    case 0:
+        eventManager.switchScreen(roleStr == "patient" ? Screen::Appointments : Screen::Database);
+        dash.reset();
+        break;
+    case 1:
+        eventManager.switchScreen(Screen::Profile);
+        dash.reset();
+        break;
+    case 2:
+        eventManager.switchScreen(Screen::Login);
+        dash.reset();
+        break;
+    default:
+        break;
+    }
 }
 
 void renderDashboardScreen(Dashboard &dash)
@@ -1042,14 +1049,14 @@ void renderDashboardScreen(Dashboard &dash)
     keypad(win_form, TRUE);
     curs_set(0);
 
+    std::string roleStr = currentUser->getRoleToString(currentUser->role);
+    std::vector<std::string> menuOptions = roleStr == "patient" ? dash.patientOptionsArr : dash.adminOptionsArr;
+
     while (!done)
     {
         // Clear the previous menu options
         werase(win_form);
         box(win_form, 0, 0);
-
-        std::string roleStr = currentUser->getRoleToString(currentUser->role);
-        std::vector<std::string> menuOptions = roleStr == "patient" ? dash.patientOptionsArr : dash.adminOptionsArr;
 
         // Render menu options
         for (int i = 0; i < static_cast<int>(menuOptions.size()); ++i)
@@ -1091,15 +1098,20 @@ void renderDashboardScreen(Dashboard &dash)
                 dash.selectedIndex = 0; // Wrap around to the first option
             }
             break;
-        case 10: // Enter key confirms selection and exits
-            handleDashboardOptions(dash, roleStr);
+        case 10: // Enter
             done = true;
             break;
         case 27:
             exitHandler();
             break;
-        case 2:
-            done = true;
+        case 2: // Back
+            wclear(win_form);
+            wclear(win_body);
+            delwin(win_form);
+            delwin(win_body);
+            clear();
+            refresh();
+            eventManager.switchScreen(Screen::Login);
             break;
         }
     }
@@ -1111,18 +1123,17 @@ void renderDashboardScreen(Dashboard &dash)
     delwin(win_body);
     clear();
     refresh();
-    dash.reset();
-    eventManager.switchScreen(Screen::Login);
+    handleDashboardOptions(dash, roleStr);
 }
 
 void renderDatabaseControlInfo(Database &db, Color &colorScheme)
 {
     std::string header = "Database Controls";
-    int outer_width = 32;
-    int outer_height = 10;
+    int outer_width = 28;
+    int outer_height = 8;
 
-    int inner_width = 30;
-    int inner_height = 8;
+    int inner_width = 26;
+    int inner_height = 5;
 
     WINDOW *win_outer = newwin(outer_height, outer_width, 12, 1);
     wbkgd(win_outer, COLOR_PAIR(colorScheme.primary));
@@ -1134,26 +1145,189 @@ void renderDatabaseControlInfo(Database &db, Color &colorScheme)
     wbkgd(win_inner, COLOR_PAIR(colorScheme.primary));
     box(win_inner, 0, 0);
 
-    int y_offset = 0;
-    if (db.currentFilter == Database::Filter::patient)
+    int y_offset = 1; // Start at 1 to avoid overwriting the box borders
+
+    const auto &controls = db.controlInfoArr;
+
+    for (const auto &control : controls)
     {
-        for (int i = 0; i < static_cast<int>(db.patientDatabaseControlsArr.size()); i++)
-        {
-            mvwprintw(win_inner, ++y_offset, (inner_width - db.patientDatabaseControlsArr[i].length()) / 2, "%s", db.patientDatabaseControlsArr[i].c_str());
-        }
+        mvwprintw(win_inner, y_offset++, 1, "%s", control.c_str());
     }
-    else
-    {
-        for (int i = 0; i < static_cast<int>(db.adminDatabaseControlsArr.size()); i++)
-        {
-            mvwprintw(win_inner, ++y_offset, (inner_width - db.adminDatabaseControlsArr[i].length()) / 2, "%s", db.adminDatabaseControlsArr[i].c_str());
-        }
-    }
+
     wrefresh(win_inner);
-    delwin(win_inner);
+
+    // Correct order: Delete outer window, which also deletes subwindow
     delwin(win_outer);
 }
 
 void renderDatabaseScreen(Database &db)
 {
+    Color colorScheme;
+    renderHeader();
+    renderControlInfo();
+    renderDatabaseControlInfo(db, colorScheme);
+
+    int baseline = 11;
+    std::string header = "MedTek+ User Database";
+    mvprintw(baseline, (COLS - header.length()) / 2, "%s", header.c_str());
+
+    bkgd(COLOR_PAIR(colorScheme.primary));
+
+    int outer_height = 28;
+    int outer_width = 82;
+
+    int start_y = ((LINES - outer_height) / 2) + 5;
+    int start_x = (COLS - outer_width) / 2;
+
+    WINDOW *win_body = newwin(outer_height, outer_width, start_y, start_x);
+    wbkgd(win_body, COLOR_PAIR(colorScheme.primary));
+    box(win_body, 0, 0);
+
+    int inner_height = outer_height - 4;
+    int inner_width = outer_width - 4;
+
+    WINDOW *win_form = derwin(win_body, inner_height, inner_width, 2, 2);
+    wbkgd(win_form, COLOR_PAIR(colorScheme.primary));
+    box(win_form, 0, 0);
+
+    // Refresh windows
+    std::string subHeader = "Patient Records";
+    mvwprintw(win_body, 1, (outer_width - subHeader.length()) / 2, "%s", subHeader.c_str());
+    wrefresh(win_body);
+    wrefresh(win_form);
+
+    std::vector<std::string> records = {
+        {"Michael Peter Cheng"},
+        {"Alice Johnson"},
+        {"John Doe"},
+        {"Sarah Connor"},
+        {"Kyle Reese"},
+        {"Ellen Ripley"}};
+
+    db.generateListMatrix(records);
+
+    int selectedRow = 0;
+    int selectedCol = 0;
+
+    keypad(win_form, TRUE);
+    curs_set(0);
+
+    while (true)
+    {
+        werase(win_form);
+        box(win_form, 0, 0);
+        mvwhline(win_form, 2, 2, ACS_HLINE, inner_width - 4);
+
+        // Render the list matrix
+        for (size_t i = 0; i < db.listMatrix.size(); i++)
+        {
+            int xPos = 2; // Start position
+            int yPos = 1 + (i * 2);
+
+            for (size_t j = 0; j < db.listMatrix[i].size(); j++)
+            {
+                // If it's the first button (View), add extra spacing
+                if (j == 1)
+                {
+                    xPos += 5; // Increase gap after name field
+                }
+
+                // Highlight selected item
+                if (i > 0 && i == selectedRow && j == selectedCol)
+                {
+                    wattron(win_form, A_REVERSE);
+                }
+
+                mvwprintw(win_form, yPos, xPos, "%s", db.listMatrix[i][j].c_str());
+
+                if (i > 0 && i == selectedRow && j == selectedCol)
+                {
+                    wattroff(win_form, A_REVERSE);
+                }
+
+                // Move to the next column
+                xPos += inner_width / db.listMatrix[i].size();
+            }
+        }
+
+        wrefresh(win_form);
+
+        int ch = wgetch(win_form);
+
+        if (selectedRow == 0)
+        {
+            if (ch == KEY_BACKSPACE || ch == 127)
+            {
+                if (!db.searchQuery.empty())
+                {
+                    db.searchQuery.pop_back();
+                }
+            }
+            else if (ch == '\n')
+            {
+                // Trigger search (optional)
+            }
+            else if (ch >= 32 && ch <= 126) // Allow printable ASCII characters
+            {
+                db.searchQuery += static_cast<char>(ch);
+            }
+
+            // Regenerate the list matrix with the updated search query
+            db.generateListMatrix(records);
+        }
+
+        // Handle input
+        switch (ch)
+        {
+        case KEY_DOWN:
+            if (selectedRow < static_cast<int>(db.listMatrix.size()) - 1)
+            {
+                selectedRow++;
+                selectedCol = 1; // Reset column selection when moving rows
+            }
+            break;
+        case KEY_UP:
+            if (selectedRow > 0)
+            {
+                selectedRow--;
+                selectedCol = 1; // Reset column selection when moving rows
+            }
+            break;
+        case KEY_LEFT:
+            if (selectedRow > 0 && selectedCol > 1)
+            {
+                selectedCol--;
+            }
+            break;
+        case KEY_RIGHT:
+            if (selectedRow > 0 && selectedCol < static_cast<int>(db.listMatrix[selectedRow].size()) - 1)
+            {
+                selectedCol++;
+            }
+            break;
+        case 10: // Enter key
+            if (selectedRow > 0)
+            {
+                if (selectedCol == 2)
+                {
+                    // Handle "View" button
+                    return;
+                }
+                else if (selectedCol == 3)
+                {
+                    // Handle "Update" button
+                    return;
+                }
+                else if (selectedCol == 4)
+                {
+                    // Handle "Delete" button
+                    return;
+                }
+            }
+            break;
+        case 27: // ESC to exit
+            endwin();
+            return;
+        }
+    }
 }

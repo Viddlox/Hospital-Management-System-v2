@@ -69,7 +69,6 @@ private:
     // Render the UI layout
     void renderLayout()
     {
-        wrefresh(stdscr);
         switch (screen)
         {
         case Screen::Login:
@@ -77,20 +76,23 @@ private:
             renderHeader();
             renderControlInfo();
             renderLoginScreen();
+            wrefresh(stdscr);
             break;
         case Screen::Dashboard:
             curs_set(0);
             renderHeader();
             renderControlInfo();
             renderDashboardScreen(dash);
+            wrefresh(stdscr);
             break;
         case Screen::Register:
             curs_set(1);
             renderRegistrationScreen(reg);
+            wrefresh(stdscr);
             break;
         case Screen::Database:
-            curs_set(1);
             renderDatabaseScreen(db);
+            wrefresh(stdscr);
             break;
         case Screen::Appointments:
             break;

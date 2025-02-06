@@ -155,7 +155,7 @@ struct Dashboard
         "Profile",
         "Log Out"};
     std::vector<std::string> adminOptionsArr = {
-        "Userbase",
+        "Database",
         "Profile",
         "Log Out"};
     int selectedIndex = 0;
@@ -167,32 +167,47 @@ struct Dashboard
 
 struct Database
 {
-    std::vector<std::string> patientDatabaseControlsArr = {
-        "(1) Create new patient",
-        "(2) Switch to admin database",
-        "(←) Previous page",
-        "(→) Next page"};
-    std::vector<std::string> adminDatabaseControlsArr = {
-        "(1) Create new admin",
-        "(2) Switch to patient database",
-        "(←) Previous page",
-        "(→) Next page"};
+    std::vector<std::string> controlInfoArr = {
+        "1) PgDn (prev page)",
+        "2) PgUp (next page)",
+        "3) Tab (switch role)"};
     std::vector<std::string> recordOptionsArr = {
         "View record",
         "Update record",
-        "Delete record"
-    };
+        "Delete record"};
+    std::vector<std::string> filterOptionsArr = {
+        "Switch to admin database",
+        "Switch to patient database"};
     enum class Filter
     {
-        admin,
         patient,
+        admin
     };
     int currentPage = 0;
+    std::string searchQuery = "";
     Filter currentFilter = Filter::patient;
+
+    // Matrix structure (first row is search bar, remaining rows are records)
+    std::vector<std::vector<std::string>> listMatrix;
+
     void reset()
     {
         currentPage = 0;
         currentFilter = Filter::patient;
+        searchQuery = "";
+    }
+    void generateListMatrix(const std::vector<std::string> &records)
+    {
+        listMatrix.clear();
+
+        // Row 0: Search bar (Single row, single column)
+        listMatrix.push_back({"Search: " + searchQuery});
+
+        // Rows 1-N: Patient records (4 columns)
+        for (const auto &record : records)
+        {
+            listMatrix.push_back({record, "[View]", "[Update]", "[Delete]"});
+        }
     }
 };
 
