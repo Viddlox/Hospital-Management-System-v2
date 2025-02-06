@@ -159,7 +159,7 @@ public:
         initScreen();
 
         if (userManager.getAdminCount() < 1)
-            userManager.createAdmin("admin", "1234");
+            userManager.createAdmin("admin", "1234", "Michael Cheng");
         try
         {
             while (isRunning.load())

@@ -12,7 +12,6 @@ class Patient : public User
 public:
     // Personal information
     int age;
-    std::string fullName;
     std::string religion;
     std::string nationality;
     std::string identityCardNumber;
@@ -36,7 +35,7 @@ public:
     // Default constructor
     Patient()
         : User(),
-          age(0), fullName(""), religion(""), nationality(""),
+          age(0), religion(""), nationality(""),
           identityCardNumber(""), maritalStatus(""), gender(""), race(""),
           email(""), contactNumber(""), emergencyContactNumber(""), emergencyContactName(""),
           address(""), bmi(0), height(""), weight(""), appointments({}) {}
@@ -48,8 +47,8 @@ public:
         const std::string &maritalStatus, const std::string &gender, const std::string &race, const std::string &email,
         const std::string &contactNumber, const std::string &emergencyContactNumber, const std::string &emergencyContactName,
         const std::string &address, double bmi, const std::string &height, const std::string &weight, const std::vector<Appointment> appointments = {})
-        : User(username, password, Role::Patient), // Call base class constructor
-          age(age), fullName(fullName), religion(religion), nationality(nationality),
+        : User(username, password, fullName, Role::Patient), // Call base class constructor
+          age(age), religion(religion), nationality(nationality),
           identityCardNumber(identityCardNumber), maritalStatus(maritalStatus), gender(gender), race(race),
           email(email), contactNumber(contactNumber), emergencyContactNumber(emergencyContactNumber), emergencyContactName(emergencyContactName),
           address(address), bmi(bmi), height(height), weight(weight), appointments(appointments)

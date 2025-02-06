@@ -29,20 +29,23 @@ protected:
 public:
     std::string username;
     std::string password;
+    std::string fullName;
     Role role;
 
     User()
         : id(generateId()),
           createdAt(std::chrono::system_clock::now()),
           username(""), 
-          password(""), 
+          password(""),
+          fullName(""),
           role(Role::User) {}
 
-    User(const std::string &username, const std::string &password, Role role)
+    User(const std::string &username, const std::string &password, const std::string &fullName, Role role)
         : id(generateId()),
           createdAt(std::chrono::system_clock::now()),
           username(username), 
-          password(password), 
+          password(password),
+          fullName(fullName),
           role(role) {}
 
     virtual ~User() = default; // Virtual destructor for proper cleanup of derived classes
@@ -83,6 +86,7 @@ public:
 
     const std::string &getId() const { return id; }
     const std::string &getUsername() const { return username; }
+    const std::string &getFullName() const { return fullName; }
     const std::string &getPassword() const { return password; }
     Role getRole() const { return role; }
 };

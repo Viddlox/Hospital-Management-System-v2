@@ -6,8 +6,8 @@
 class Admin : public User
 {
 public:
-	Admin(const std::string &username = "", const std::string &password = "")
-		: User(username, password, Role::Admin) {}
+	Admin(const std::string &username = "", const std::string &password = "", const std::string &fullName = "")
+		: User(username, password, fullName, Role::Admin) {}
 
 	// Serialize admin object to JSON
 	friend void to_json(json &j, const Admin &a)
@@ -17,6 +17,7 @@ public:
 			{"role", a.getRoleToString(a.role)},
 			{"username", a.username},
 			{"password", a.password},
+			{"fullName", a.fullName},
 			{"createdAt", a.getCreatedAt()}};
 	}
 
@@ -27,6 +28,7 @@ public:
 		a.role = a.getRoleToEnum(j.at("role").get<std::string>());
 		a.username = j.at("username").get<std::string>();
 		a.password = j.at("password").get<std::string>();
+		a.fullName = j.at("fullName").get<std::string>();
 
 		// Deserialize createdAt as a string and convert it to time_point
 		std::string createdAtStr = j.at("createdAt").get<std::string>();

@@ -1163,15 +1163,18 @@ void renderDatabaseControlInfo(Database &db, Color &colorScheme)
 void renderDatabaseScreen(Database &db)
 {
     Color colorScheme;
+    EventManager &eventManager = EventManager::getInstance();
+
     renderHeader();
     renderControlInfo();
     renderDatabaseControlInfo(db, colorScheme);
 
+    bkgd(COLOR_PAIR(colorScheme.primary));
+
     int baseline = 11;
     std::string header = "MedTek+ User Database";
     mvprintw(baseline, (COLS - header.length()) / 2, "%s", header.c_str());
-
-    bkgd(COLOR_PAIR(colorScheme.primary));
+    refresh(); // Ensure header is displayed
 
     int outer_height = 28;
     int outer_width = 82;
@@ -1182,6 +1185,7 @@ void renderDatabaseScreen(Database &db)
     WINDOW *win_body = newwin(outer_height, outer_width, start_y, start_x);
     wbkgd(win_body, COLOR_PAIR(colorScheme.primary));
     box(win_body, 0, 0);
+    wrefresh(win_body);
 
     int inner_height = outer_height - 4;
     int inner_width = outer_width - 4;
@@ -1189,65 +1193,83 @@ void renderDatabaseScreen(Database &db)
     WINDOW *win_form = derwin(win_body, inner_height, inner_width, 2, 2);
     wbkgd(win_form, COLOR_PAIR(colorScheme.primary));
     box(win_form, 0, 0);
-
-    // Refresh windows
-    std::string subHeader = "Patient Records";
-    mvwprintw(win_body, 1, (outer_width - subHeader.length()) / 2, "%s", subHeader.c_str());
-    wrefresh(win_body);
     wrefresh(win_form);
 
-    std::vector<std::string> records = {
-        {"Michael Peter Cheng"},
-        {"Alice Johnson"},
-        {"John Doe"},
-        {"Sarah Connor"},
-        {"Kyle Reese"},
-        {"Ellen Ripley"}};
+    std::vector<std::string> patientRecords = {
+        "Michael Peter Cheng",
+        "Alice Johnson",
+        "John Doe",
+        "Sarah Connor",
+        "Kyle Reese",
+        "Ellen Ripley"};
 
-    db.generateListMatrix(records);
+    std::vector<std::string> adminRecords = {
+        "Glenn Quagmire",
+        "Peter Griffin",
+        "Joe Swanson"};
+
+    db.generateListMatrixPatient(patientRecords);
+    db.generateListMatrixAdmin(adminRecords);
+    db.listMatrixCurrent = db.listMatrixPatient;
 
     int selectedRow = 0;
-    int selectedCol = 0;
+    int selectedCol = 1; // Start at first button
+    bool done = false;
 
     keypad(win_form, TRUE);
-    curs_set(0);
+    curs_set(0); // Start with cursor hidden
 
-    while (true)
+    while (!done)
     {
+        // Render subheader (Patient Records / Admin Records)
+        werase(win_body);
+        box(win_body, 0, 0);
+        std::string subHeader = db.currentFilter == Database::Filter::patient ? db.subheaderArr[0] : db.subheaderArr[1];
+        mvwprintw(win_body, 1, (outer_width - subHeader.length()) / 2, "%s", subHeader.c_str());
+        wrefresh(win_body);
+
         werase(win_form);
         box(win_form, 0, 0);
+
         mvwhline(win_form, 2, 2, ACS_HLINE, inner_width - 4);
 
-        // Render the list matrix
-        for (size_t i = 0; i < db.listMatrix.size(); i++)
+        // Render the search bar
+        std::string searchText = "Search: " + db.searchQuery;
+        mvwprintw(win_form, 1, 2, "%s", searchText.c_str());
+
+        // Render the list matrix, skipping row 0 (search bar is already drawn)
+        for (size_t i = 1; i < db.listMatrixCurrent.size(); i++)
         {
-            int xPos = 2; // Start position
+            int xPos = 2;
             int yPos = 1 + (i * 2);
 
-            for (size_t j = 0; j < db.listMatrix[i].size(); j++)
+            for (size_t j = 0; j < db.listMatrixCurrent[i].size(); j++)
             {
-                // If it's the first button (View), add extra spacing
                 if (j == 1)
-                {
-                    xPos += 5; // Increase gap after name field
-                }
+                    xPos += 5; // Adjust spacing for buttons
 
                 // Highlight selected item
-                if (i > 0 && i == selectedRow && j == selectedCol)
-                {
+                if (i == selectedRow && j == selectedCol)
                     wattron(win_form, A_REVERSE);
-                }
 
-                mvwprintw(win_form, yPos, xPos, "%s", db.listMatrix[i][j].c_str());
+                mvwprintw(win_form, yPos, xPos, "%s", db.listMatrixCurrent[i][j].c_str());
 
-                if (i > 0 && i == selectedRow && j == selectedCol)
-                {
+                if (i == selectedRow && j == selectedCol)
                     wattroff(win_form, A_REVERSE);
-                }
 
-                // Move to the next column
-                xPos += inner_width / db.listMatrix[i].size();
+                xPos += inner_width / db.listMatrixCurrent[i].size();
             }
+        }
+
+        // Position the cursor in the search bar if selected
+        if (selectedRow == 0)
+        {
+            curs_set(1);                                 // Show cursor
+            wmove(win_form, 1, 2 + searchText.length()); // Move cursor to end of search text
+        }
+        else
+        {
+            curs_set(0); // Hide cursor
         }
 
         wrefresh(win_form);
@@ -1256,78 +1278,79 @@ void renderDatabaseScreen(Database &db)
 
         if (selectedRow == 0)
         {
-            if (ch == KEY_BACKSPACE || ch == 127)
+            if (ch == KEY_BACKSPACE || ch == 127) // Handle backspace
             {
                 if (!db.searchQuery.empty())
-                {
                     db.searchQuery.pop_back();
-                }
             }
             else if (ch == '\n')
             {
-                // Trigger search (optional)
+                // Optional: Trigger search when Enter is pressed
             }
-            else if (ch >= 32 && ch <= 126) // Allow printable ASCII characters
+            else if (ch >= 32 && ch <= 126) // Allow printable characters
             {
                 db.searchQuery += static_cast<char>(ch);
             }
 
-            // Regenerate the list matrix with the updated search query
-            db.generateListMatrix(records);
+            // Regenerate list dynamically
+            if (db.currentFilter == Database::Filter::patient)
+            {
+                db.generateListMatrixPatient(patientRecords);
+            }
+            else
+            {
+                db.generateListMatrixAdmin(adminRecords);
+            }
         }
 
-        // Handle input
+        // Handle input (Navigation, Tab Switching, etc.)
         switch (ch)
         {
         case KEY_DOWN:
-            if (selectedRow < static_cast<int>(db.listMatrix.size()) - 1)
-            {
+            if (selectedRow < static_cast<int>(db.listMatrixCurrent.size()) - 1)
                 selectedRow++;
-                selectedCol = 1; // Reset column selection when moving rows
-            }
             break;
         case KEY_UP:
             if (selectedRow > 0)
-            {
                 selectedRow--;
-                selectedCol = 1; // Reset column selection when moving rows
-            }
             break;
         case KEY_LEFT:
             if (selectedRow > 0 && selectedCol > 1)
-            {
                 selectedCol--;
-            }
             break;
         case KEY_RIGHT:
-            if (selectedRow > 0 && selectedCol < static_cast<int>(db.listMatrix[selectedRow].size()) - 1)
-            {
+            if (selectedRow > 0 && selectedCol < static_cast<int>(db.listMatrixCurrent[selectedRow].size()) - 1)
                 selectedCol++;
-            }
             break;
-        case 10: // Enter key
-            if (selectedRow > 0)
+        case 9: // Tab key to switch filters
+            db.currentFilter = (db.currentFilter == Database::Filter::patient) ? Database::Filter::admin : Database::Filter::patient;
+            if (db.currentFilter == Database::Filter::patient)
             {
-                if (selectedCol == 2)
-                {
-                    // Handle "View" button
-                    return;
-                }
-                else if (selectedCol == 3)
-                {
-                    // Handle "Update" button
-                    return;
-                }
-                else if (selectedCol == 4)
-                {
-                    // Handle "Delete" button
-                    return;
-                }
+                db.generateListMatrixPatient(patientRecords);
+                db.listMatrixCurrent = db.listMatrixPatient;
             }
+            else
+            {
+                db.generateListMatrixAdmin(adminRecords);
+                db.listMatrixCurrent = db.listMatrixAdmin;
+            }
+            selectedRow = 0;
+            selectedCol = 1; // Reset selection
             break;
         case 27: // ESC to exit
-            endwin();
-            return;
+            exitHandler();
+            done = true;
+            break;
+        case 2: // Custom key for "Back"
+            done = true;
+            break;
         }
     }
+
+    // Cleanup
+    wclear(win_form);
+    wclear(win_body);
+    delwin(win_form);
+    delwin(win_body);
+    eventManager.switchScreen(Screen::Login);
 }

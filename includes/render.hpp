@@ -175,9 +175,9 @@ struct Database
         "View record",
         "Update record",
         "Delete record"};
-    std::vector<std::string> filterOptionsArr = {
-        "Switch to admin database",
-        "Switch to patient database"};
+    std::vector<std::string> subheaderArr = {
+        "Patient records",
+        "Admin records"};
     enum class Filter
     {
         patient,
@@ -188,7 +188,9 @@ struct Database
     Filter currentFilter = Filter::patient;
 
     // Matrix structure (first row is search bar, remaining rows are records)
-    std::vector<std::vector<std::string>> listMatrix;
+    std::vector<std::vector<std::string>> listMatrixPatient;
+    std::vector<std::vector<std::string>> listMatrixAdmin;
+    std::vector<std::vector<std::string>> listMatrixCurrent;
 
     void reset()
     {
@@ -196,17 +198,22 @@ struct Database
         currentFilter = Filter::patient;
         searchQuery = "";
     }
-    void generateListMatrix(const std::vector<std::string> &records)
+    void generateListMatrixPatient(const std::vector<std::string> &records)
     {
-        listMatrix.clear();
+        listMatrixPatient.clear();
 
-        // Row 0: Search bar (Single row, single column)
-        listMatrix.push_back({"Search: " + searchQuery});
-
-        // Rows 1-N: Patient records (4 columns)
         for (const auto &record : records)
         {
-            listMatrix.push_back({record, "[View]", "[Update]", "[Delete]"});
+            listMatrixPatient.push_back({record, "[View]", "[Update]", "[Delete]"});
+        }
+    }
+    void generateListMatrixAdmin(const std::vector<std::string> &records)
+    {
+        listMatrixAdmin.clear();
+
+        for (const auto &record : records)
+        {
+            listMatrixAdmin.push_back({record, "[View]", "[Update]", "[Delete]"});
         }
     }
 };

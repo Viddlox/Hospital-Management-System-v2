@@ -148,6 +148,7 @@ public:
 		if (!result.second)
 		{
 			std::cout << "Patient with ID " << newPatient->getId() << " already exists.\n";
+			std::cout << "Patient with username " << newPatient->getUsername() << " already exists.\n";
 			return;
 		}
 
@@ -155,14 +156,15 @@ public:
 	}
 
 	// Add record (Admin)
-	void createAdmin(const std::string &username, const std::string &password)
+	void createAdmin(const std::string &username, const std::string &password, const std::string &fullName)
 	{
-		std::shared_ptr<Admin> newAdmin = std::make_shared<Admin>(username, password);
+		std::shared_ptr<Admin> newAdmin = std::make_shared<Admin>(username, password, fullName);
 
 		auto result = userMap.insert({newAdmin->getId(), newAdmin});
 		if (!result.second)
 		{
 			std::cout << "Admin with ID " << newAdmin->getId() << " already exists.\n";
+			std::cout << "Admin with username " << newAdmin->getUsername() << " already exists.\n";
 			return;
 		}
 		newAdmin->saveToFile();
@@ -251,6 +253,58 @@ public:
 		return nullptr;
 	}
 
+	// Search record by name
+	std::shared_ptr<User> getUserByName(const std::string &fullName)
+	{
+		// Check in-memory cache first
+		for (const auto &pair : userMap)
+		{
+			if (pair.second->getFullName() == fullName)
+			{
+				return pair.second;
+			}
+		}
+		// If not found in memory, check the folder-based database (by role)
+		std::vector<Role> roles = {Role::Admin, Role::Patient, Role::User};
+		for (const auto &role : roles)
+		{
+			std::string roleStr = User::getRoleToString(role);
+			std::string filePath = "db/" + roleStr + "/";
+
+			try
+			{
+				for (const auto &entry : std::filesystem::directory_iterator(filePath))
+				{
+					if (entry.path().extension() == ".json")
+					{
+						std::ifstream file(entry.path());
+						if (file.is_open())
+						{
+							nlohmann::json j;
+							file >> j;
+							file.close();
+
+							if (j.contains("fullName") && j["fullName"] == fullName)
+							{
+								auto user = getUserFromFile(j["id"], roleStr);
+								if (user)
+								{
+									return user;
+								}
+							}
+						}
+					}
+				}
+			}
+			catch (const std::exception &e)
+			{
+
+				return nullptr;
+			}
+		}
+		return nullptr;
+	}
+
 	// Delete record
 	void deleteUserById(const std::string &userId)
 	{
@@ -296,6 +350,8 @@ public:
 				 { admin->username = value; }},
 				{"password", [&admin](const std::string &value)
 				 { admin->password = value; }},
+				{"fullName", [&admin](const std::string &value)
+				 { admin->fullName = value; }},
 			};
 
 			auto it = adminUpdates.find(fieldName);
@@ -427,33 +483,33 @@ public:
 	{
 		return currentUser;
 	}
-	std::vector<std::string> getAdminUsernames()
+	std::vector<std::string> getAdminNames()
 	{
-		std::vector<std::string> adminUsernames;
+		std::vector<std::string> adminNames;
 
 		for (const auto &pair : userMap)
 		{
 			const std::shared_ptr<User> &userPtr = pair.second;
 			if (userPtr && userPtr->role == Role::Admin)
 			{
-				adminUsernames.push_back(userPtr->getUsername());
+				adminNames.push_back(userPtr->getFullName());
 			}
 		}
-		return adminUsernames;
+		return adminNames;
 	}
-	std::vector<std::string> getPatientUsernames()
+	std::vector<std::string> getPatientNames()
 	{
-		std::vector<std::string> patientUsernames;
+		std::vector<std::string> patientNames;
 
 		for (const auto &pair : userMap)
 		{
 			const std::shared_ptr<User> &userPtr = pair.second;
 			if (userPtr && userPtr->role == Role::Patient)
 			{
-				patientUsernames.push_back(userPtr->getUsername());
+				patientNames.push_back(userPtr->getFullName());
 			}
 		}
-		return patientUsernames;
+		return patientNames;
 	}
 };
 
