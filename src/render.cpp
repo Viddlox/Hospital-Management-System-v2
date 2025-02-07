@@ -1130,10 +1130,10 @@ void renderDatabaseControlInfo(Database &db, Color &colorScheme)
 {
     std::string header = "Database Controls";
     int outer_width = 28;
-    int outer_height = 8;
+    int outer_height = 10;
 
     int inner_width = 26;
-    int inner_height = 5;
+    int inner_height = 7;
 
     WINDOW *win_outer = newwin(outer_height, outer_width, 12, 1);
     wbkgd(win_outer, COLOR_PAIR(colorScheme.primary));
@@ -1145,7 +1145,7 @@ void renderDatabaseControlInfo(Database &db, Color &colorScheme)
     wbkgd(win_inner, COLOR_PAIR(colorScheme.primary));
     box(win_inner, 0, 0);
 
-    int y_offset = 1; // Start at 1 to avoid overwriting the box borders
+    int y_offset = 1;
 
     const auto &controls = db.controlInfoArr;
 
@@ -1155,8 +1155,6 @@ void renderDatabaseControlInfo(Database &db, Color &colorScheme)
     }
 
     wrefresh(win_inner);
-
-    // Correct order: Delete outer window, which also deletes subwindow
     delwin(win_outer);
 }
 
@@ -1164,6 +1162,7 @@ void renderDatabaseScreen(Database &db)
 {
     Color colorScheme;
     EventManager &eventManager = EventManager::getInstance();
+    UserManager &userManager = UserManager::getInstance();
 
     renderHeader();
     renderControlInfo();
@@ -1195,25 +1194,15 @@ void renderDatabaseScreen(Database &db)
     box(win_form, 0, 0);
     wrefresh(win_form);
 
-    std::vector<std::string> patientRecords = {
-        "Michael Peter Cheng",
-        "Alice Johnson",
-        "John Doe",
-        "Sarah Connor",
-        "Kyle Reese",
-        "Ellen Ripley"};
-
-    std::vector<std::string> adminRecords = {
-        "Glenn Quagmire",
-        "Peter Griffin",
-        "Joe Swanson"};
+    std::vector<std::string> patientRecords = userManager.getPatientNames();
+    std::vector<std::string> adminRecords = userManager.getAdminNames();
 
     db.generateListMatrixPatient(patientRecords);
     db.generateListMatrixAdmin(adminRecords);
-    db.listMatrixCurrent = db.listMatrixPatient;
+    db.listMatrixCurrent = db.getCurrentPagePatient(); // Initialize with first page of patient records
 
-    int selectedRow = 0;
-    int selectedCol = 1; // Start at first button
+    size_t selectedRow = 0;
+    size_t selectedCol = 1; // Start at first button
     bool done = false;
 
     keypad(win_form, TRUE);
@@ -1237,7 +1226,7 @@ void renderDatabaseScreen(Database &db)
         std::string searchText = "Search: " + db.searchQuery;
         mvwprintw(win_form, 1, 2, "%s", searchText.c_str());
 
-        // Render the list matrix, skipping row 0 (search bar is already drawn)
+        // Render the list matrix for the current page
         for (size_t i = 1; i < db.listMatrixCurrent.size(); i++)
         {
             int xPos = 2;
@@ -1296,10 +1285,12 @@ void renderDatabaseScreen(Database &db)
             if (db.currentFilter == Database::Filter::patient)
             {
                 db.generateListMatrixPatient(patientRecords);
+                db.listMatrixCurrent = db.getCurrentPagePatient();
             }
             else
             {
                 db.generateListMatrixAdmin(adminRecords);
+                db.listMatrixCurrent = db.getCurrentPageAdmin();
             }
         }
 
@@ -1307,7 +1298,7 @@ void renderDatabaseScreen(Database &db)
         switch (ch)
         {
         case KEY_DOWN:
-            if (selectedRow < static_cast<int>(db.listMatrixCurrent.size()) - 1)
+            if (selectedRow < static_cast<size_t>(db.listMatrixCurrent.size()) - 1)
                 selectedRow++;
             break;
         case KEY_UP:
@@ -1319,23 +1310,50 @@ void renderDatabaseScreen(Database &db)
                 selectedCol--;
             break;
         case KEY_RIGHT:
-            if (selectedRow > 0 && selectedCol < static_cast<int>(db.listMatrixCurrent[selectedRow].size()) - 1)
+            if (selectedRow > 0 && selectedCol < static_cast<size_t>(db.listMatrixCurrent[selectedRow].size()) - 1)
                 selectedCol++;
             break;
         case 9: // Tab key to switch filters
             db.currentFilter = (db.currentFilter == Database::Filter::patient) ? Database::Filter::admin : Database::Filter::patient;
+            db.currentPage = 0; // Reset to first page when switching filters
             if (db.currentFilter == Database::Filter::patient)
             {
                 db.generateListMatrixPatient(patientRecords);
-                db.listMatrixCurrent = db.listMatrixPatient;
+                db.listMatrixCurrent = db.getCurrentPagePatient();
             }
             else
             {
                 db.generateListMatrixAdmin(adminRecords);
-                db.listMatrixCurrent = db.listMatrixAdmin;
+                db.listMatrixCurrent = db.getCurrentPageAdmin();
             }
             selectedRow = 0;
             selectedCol = 1; // Reset selection
+            break;
+        case KEY_NPAGE: // Page Up
+            if (db.currentPage > 0)
+            {
+                db.currentPage--;
+                if (db.currentFilter == Database::Filter::patient)
+                {
+                    db.listMatrixCurrent = db.getCurrentPagePatient();
+                }
+                else
+                {
+                    db.listMatrixCurrent = db.getCurrentPageAdmin();
+                }
+            }
+            break;
+        case KEY_PPAGE: // Page Down
+            if (db.currentFilter == Database::Filter::patient && db.currentPage < db.totalPagesPatient - 1)
+            {
+                db.currentPage++;
+                db.listMatrixCurrent = db.getCurrentPagePatient();
+            }
+            else if (db.currentFilter == Database::Filter::admin && db.currentPage < db.totalPagesAdmin - 1)
+            {
+                db.currentPage++;
+                db.listMatrixCurrent = db.getCurrentPageAdmin();
+            }
             break;
         case 27: // ESC to exit
             exitHandler();

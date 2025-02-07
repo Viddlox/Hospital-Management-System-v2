@@ -170,7 +170,8 @@ struct Database
     std::vector<std::string> controlInfoArr = {
         "1) PgDn (prev page)",
         "2) PgUp (next page)",
-        "3) Tab (switch role)"};
+        "3) Tab (switch role)",
+        "4) + (create record)"};
     std::vector<std::string> recordOptionsArr = {
         "View record",
         "Update record",
@@ -183,14 +184,18 @@ struct Database
         patient,
         admin
     };
-    int currentPage = 0;
     std::string searchQuery = "";
     Filter currentFilter = Filter::patient;
 
-    // Matrix structure (first row is search bar, remaining rows are records)
+    // Matrix structure (rows are records)
     std::vector<std::vector<std::string>> listMatrixPatient;
     std::vector<std::vector<std::string>> listMatrixAdmin;
     std::vector<std::vector<std::string>> listMatrixCurrent;
+
+    int currentPage = 0;
+    int pageSize = 10; // Number of records per page
+    int totalPagesAdmin = 0;
+    int totalPagesPatient = 0;
 
     void reset()
     {
@@ -198,23 +203,51 @@ struct Database
         currentFilter = Filter::patient;
         searchQuery = "";
     }
+
     void generateListMatrixPatient(const std::vector<std::string> &records)
     {
         listMatrixPatient.clear();
-
         for (const auto &record : records)
         {
             listMatrixPatient.push_back({record, "[View]", "[Update]", "[Delete]"});
         }
+        totalPagesPatient = (listMatrixPatient.size() + pageSize - 1) / pageSize; // Calculate total pages
     }
+
     void generateListMatrixAdmin(const std::vector<std::string> &records)
     {
         listMatrixAdmin.clear();
-
         for (const auto &record : records)
         {
             listMatrixAdmin.push_back({record, "[View]", "[Update]", "[Delete]"});
         }
+        totalPagesAdmin = (listMatrixAdmin.size() + pageSize - 1) / pageSize; // Calculate total pages
+    }
+
+    std::vector<std::vector<std::string>> getCurrentPageAdmin()
+    {
+        int startIndex = currentPage * pageSize;
+        int endIndex = std::min(startIndex + pageSize, static_cast<int>(listMatrixAdmin.size()));
+        std::vector<std::vector<std::string>> res;
+
+        for (int i = startIndex; i < endIndex; i++)
+        {
+            res.push_back(listMatrixAdmin[i]);
+        }
+        return res;
+    }
+
+    std::vector<std::vector<std::string>> getCurrentPagePatient()
+    {
+        int startIndex = currentPage * pageSize;
+        int endIndex = std::min(startIndex + pageSize, static_cast<int>(listMatrixPatient.size()));
+        std::vector<std::vector<std::string>> res;
+
+        for (int i = startIndex; i < endIndex; i++)
+        {
+            res.push_back(listMatrixPatient[i]);
+        }
+        return res;
     }
 };
 

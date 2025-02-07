@@ -159,7 +159,15 @@ public:
         initScreen();
 
         if (userManager.getAdminCount() < 1)
-            userManager.createAdmin("admin", "1234", "Michael Cheng");
+        {
+            for (int i = 0; i < 30; i++)
+                userManager.createAdmin("admin" + std::to_string(i), "1234", "Michael Cheng" + std::to_string(i));
+        }
+        if (userManager.getPatientCount() < 1)
+        {
+            for (int i = 0; i < 30; i++)
+                userManager.createPatient("user" + std::to_string(i), "123", 42, "Peter Griffin" + std::to_string(i), "Christianity", "Malaysian", "010403141107", "single", "male", "Chinese", "mikeypeter37@gmail.com", "0123917125", "0123197125", "Lois Griffin", "Quahog", 20, "180", "70");
+        }
         try
         {
             while (isRunning.load())
