@@ -14,57 +14,19 @@
 class EventManager
 {
 private:
-    std::mutex mtx;
-    std::atomic<bool> isRunning{false};
-    std::condition_variable cv;
-    std::queue<std::string> notifications;
-    std::thread notificationThread;
-    std::thread timeThread;
     Screen screen;
-    std::atomic<std::time_t> time;
     UserManager &userManager = UserManager::getInstance();
     Registration reg;
     Dashboard dash;
     Database db;
+    bool isRunning = false;
 
-    EventManager() : screen(Screen::Login), time(getCurrentTime()) {}
+    EventManager() : screen(Screen::Login) {}
     ~EventManager()
     {
-        stopThreads();
     }
     EventManager(const EventManager &) = delete;
     EventManager &operator=(const EventManager &) = delete;
-
-    // Notification handling logic
-    void handleNotifications()
-    {
-        while (isRunning.load())
-        {
-            std::unique_lock<std::mutex> lock(mtx);
-            cv.wait(lock, [this]
-                    { return !notifications.empty() || !isRunning.load(); });
-
-            while (!notifications.empty())
-            {
-                std::cout << "[Notification] " << notifications.front() << std::endl;
-                notifications.pop();
-                std::this_thread::sleep_for(std::chrono::seconds(2));
-            }
-        }
-    }
-
-    // time handling logic
-    void handleTime()
-    {
-        while (isRunning.load())
-        {
-            if (screen == Screen::Dashboard)
-            {
-                renderTime(getCurrentTime());
-            }
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-        }
-    }
 
     // Render the UI layout
     void renderLayout()
@@ -114,19 +76,6 @@ private:
         initializeColors();
     }
 
-    // Stop the notification thread safely
-    void stopThreads()
-    {
-        if (notificationThread.joinable())
-        {
-            notificationThread.join();
-        }
-        if (timeThread.joinable())
-        {
-            timeThread.join();
-        }
-    }
-
 public:
     // get singleton instance
     static EventManager &getInstance()
@@ -153,9 +102,7 @@ public:
     void start()
     {
         clearScreen();
-        isRunning.store(true);
-        notificationThread = std::thread(&EventManager::handleNotifications, this);
-        timeThread = std::thread(&EventManager::handleTime, this);
+        isRunning = true;
         initScreen();
 
         if (userManager.getAdminCount() < 1)
@@ -170,7 +117,7 @@ public:
         }
         try
         {
-            while (isRunning.load())
+            while (isRunning)
             {
                 renderLayout();
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -179,7 +126,7 @@ public:
         catch (const std::exception &e)
         {
             std::cerr << "Exception: " << e.what() << std::endl;
-            isRunning.store(false);
+            isRunning = false;
         }
         exit();
     }
@@ -187,12 +134,7 @@ public:
     // Stop the event manager safely
     void exit()
     {
-        {
-            std::lock_guard<std::mutex> lock(mtx);
-            isRunning.store(false);
-        }
-        cv.notify_all();
-        stopThreads();
+        isRunning = false;
         clear();
         refresh();
         endwin();

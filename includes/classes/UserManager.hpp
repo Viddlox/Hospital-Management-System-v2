@@ -454,8 +454,12 @@ public:
 	bool validateUser(const std::string &username, const std::string &password)
 	{
 		auto user = getUserByUsername(username);
-		setCurrentUser(user);
-		return user && user->getPassword() == password;
+		if (user && user->getRole() == Role::Admin && user->getPassword() == password)
+		{
+			setCurrentUser(user);
+			return true;
+		}
+		return false;
 	}
 	int getAdminCount()
 	{

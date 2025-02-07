@@ -271,7 +271,6 @@ int calculateAge(const std::string &identityCardNumber);
 double calculateBMI(const std::string &weight, const std::string &height);
 bool submitRegistration(Registration &reg, Color &colorScheme);
 void handleDashboardOptions(Dashboard &dash, std::string &roleStr);
-void renderTime(std::time_t time);
 void renderDatabaseScreen(Database &db);
 
 #endif

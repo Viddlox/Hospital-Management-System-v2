@@ -136,7 +136,7 @@ void renderLoginScreen()
     bkgd(COLOR_PAIR(colorScheme.primary));
 
     // Render subheaders
-    std::string subHeader1 = "Welcome to MedTek+ TUI";
+    std::string subHeader1 = "Welcome to MedTek+ administrator TUI";
     std::string subHeader2 = "Please enter your login credentials below";
 
     int baseline = 11;
@@ -150,7 +150,7 @@ void renderLoginScreen()
 
     wbkgd(win_body, COLOR_PAIR(colorScheme.primary));
     box(win_body, 0, 0);
-    std::string loginForm = "Login Form";
+    std::string loginForm = "Login";
     mvwprintw(win_body, 1, (50 - loginForm.length()) / 2, "%s", loginForm.c_str());
 
     // Create a subwindow inside the main window for the form
@@ -193,18 +193,9 @@ void renderLoginScreen()
     set_form_sub(form, derwin(win_form, 6, 46, 1, 1)); // Form subwindow inside win_form
     post_form(form);
 
-    int footer_start_y = form_start_y + 12;
-    int footer_start_x = (COLS - 33) / 2;
-    std::string footer = "Don't have an existing account? Press Ctrl+r to register now";
-    WINDOW *win_footer = newwin(4, 33, footer_start_y, footer_start_x);
-    wbkgd(win_footer, COLOR_PAIR(colorScheme.primary));
-    box(win_footer, 0, 0);
-    printCentered(win_footer, 1, footer);
-
     // Refresh the windows
     wrefresh(win_body);
     wrefresh(win_form);
-    wrefresh(win_footer);
 
     // Main input loop
     int ch;
@@ -240,7 +231,6 @@ void renderLoginScreen()
                 free_field(fields[i]);
             delwin(win_form);
             delwin(win_body);
-            delwin(win_footer);
             eventManager.switchScreen(Screen::Register);
             return;
         case KEY_DC:
@@ -268,7 +258,6 @@ void renderLoginScreen()
             free_field(fields[i]);
         delwin(win_form);
         delwin(win_body);
-        delwin(win_footer);
         eventManager.switchScreen(Screen::Dashboard);
     }
     else
@@ -967,21 +956,6 @@ void renderRegistrationScreen(Registration &reg)
     renderRegistrationAccountSection(reg, colorScheme);
 }
 
-void renderTime(std::time_t time)
-{
-    int row = 11;
-    int col = 1;
-
-    std::string timeStr = std::ctime(&time);
-    timeStr.pop_back();
-
-    Color colorScheme;
-    attron(COLOR_PAIR(colorScheme.primary));
-    mvprintw(row, col, "%s", timeStr.c_str());
-    attroff(COLOR_PAIR(colorScheme.primary));
-    refresh();
-}
-
 void handleDashboardOptions(Dashboard &dash, std::string &roleStr)
 {
     EventManager &eventManager = EventManager::getInstance();
@@ -1370,5 +1344,5 @@ void renderDatabaseScreen(Database &db)
     wclear(win_body);
     delwin(win_form);
     delwin(win_body);
-    eventManager.switchScreen(Screen::Login);
+    eventManager.switchScreen(Screen::Dashboard);
 }
