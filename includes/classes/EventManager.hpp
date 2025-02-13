@@ -44,16 +44,14 @@ private:
             renderDashboardScreen(dash);
             wrefresh(stdscr);
             break;
-        case Screen::Register:
+        case Screen::RegisterPatient:
             curs_set(1);
-            renderRegistrationScreen(reg);
+            renderRegistrationScreenPatient(reg);
             wrefresh(stdscr);
             break;
         case Screen::Database:
             renderDatabaseScreen(db);
             wrefresh(stdscr);
-            break;
-        case Screen::Appointments:
             break;
         case Screen::Profile:
             break;
@@ -105,7 +103,7 @@ public:
         if (userManager.getAdminCount() < 1)
         {
             for (int i = 1; i < 31; i++)
-                userManager.createAdmin("admin" + std::to_string(i), "1234", "Michael Cheng" + std::to_string(i));
+                userManager.createAdmin("admin" + std::to_string(i), "1234", "Michael Cheng" + std::to_string(i), "nigga@gmail.com", "0123917125");
         }
         if (userManager.getPatientCount() < 1)
         {

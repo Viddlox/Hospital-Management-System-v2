@@ -156,9 +156,9 @@ public:
 	}
 
 	// Add record (Admin)
-	void createAdmin(const std::string &username, const std::string &password, const std::string &fullName)
+	void createAdmin(const std::string &username, const std::string &password, const std::string &fullName, const std::string &email, const std::string &contactNumber)
 	{
-		std::shared_ptr<Admin> newAdmin = std::make_shared<Admin>(username, password, fullName);
+		std::shared_ptr<Admin> newAdmin = std::make_shared<Admin>(username, password, fullName, email, contactNumber);
 
 		auto result = userMap.insert({newAdmin->getId(), newAdmin});
 		if (!result.second)
@@ -349,6 +349,10 @@ public:
 				 { admin->password = value; }},
 				{"fullName", [&admin](const std::string &value)
 				 { admin->fullName = value; }},
+				{"email", [&admin](const std::string &value)
+				 { admin->email = value; }},
+				{"contactNumber", [&admin](const std::string &value)
+				 { admin->contactNumber = value; }},
 			};
 
 			auto it = adminUpdates.find(fieldName);

@@ -15,9 +15,9 @@ namespace fs = std::filesystem;
 
 enum class Role
 {
-	Admin,
-	Patient,
-	User
+    Admin,
+    Patient,
+    User
 };
 
 class User
@@ -30,22 +30,28 @@ public:
     std::string username;
     std::string password;
     std::string fullName;
+    std::string email;
+    std::string contactNumber;
     Role role;
 
     User()
         : id(generateId()),
           createdAt(std::chrono::system_clock::now()),
-          username(""), 
+          username(""),
           password(""),
           fullName(""),
+          email(""),
+          contactNumber(""),
           role(Role::User) {}
 
-    User(const std::string &username, const std::string &password, const std::string &fullName, Role role)
+    User(const std::string &username, const std::string &password, const std::string &fullName, const std::string &email, const std::string &contactNumber, Role role)
         : id(generateId()),
           createdAt(std::chrono::system_clock::now()),
-          username(username), 
+          username(username),
           password(password),
           fullName(fullName),
+          email(email),
+          contactNumber(contactNumber),
           role(role) {}
 
     virtual ~User() = default; // Virtual destructor for proper cleanup of derived classes
@@ -60,7 +66,7 @@ public:
     {
         return formatTimestamp(createdAt);
     }
-    
+
     static std::string getRoleToString(Role role)
     {
         switch (role)
@@ -90,6 +96,5 @@ public:
     const std::string &getPassword() const { return password; }
     Role getRole() const { return role; }
 };
-
 
 #endif

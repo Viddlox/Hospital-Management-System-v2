@@ -35,11 +35,11 @@ class UserManager;
 enum class Screen
 {
     Login,
-    Register,
+    RegisterPatient,
+    RegisterAdmin,
     Dashboard,
     Profile,
     Database,
-    Appointments
 };
 
 struct Color
@@ -151,11 +151,7 @@ struct Registration
 
 struct Dashboard
 {
-    std::vector<std::string> patientOptionsArr = {
-        "Appointments",
-        "Profile",
-        "Log Out"};
-    std::vector<std::string> adminOptionsArr = {
+    std::vector<std::string> optionsArr = {
         "Database",
         "Profile",
         "Log Out"};
@@ -190,17 +186,22 @@ struct Database
 
     // Matrix structure (rows are records)
     std::vector<std::vector<std::string>> listMatrixPatient, listMatrixAdmin, listMatrixCurrent;
+    std::vector<std::pair<std::string, std::string>> patientRecords, adminRecords;
 
     int currentPage = 0;
     int pageSize = 10; // Number of records per page
     int totalPagesAdmin = 0;
     int totalPagesPatient = 0;
+    int selectedRow = -1;
+    int selectedCol = 1;
 
     void reset()
     {
         currentPage = 0;
         currentFilter = Filter::patient;
         searchQuery = "";
+        selectedRow = -1;
+        selectedCol = 1;
     }
 
     void generateListMatrixPatient(const std::vector<std::pair<std::string, std::string>> &records)
@@ -258,11 +259,11 @@ void clearScrollbackBuffer();
 char *trim_whitespaces(char *str);
 void renderLoginScreen();
 void renderDashboardScreen(Dashboard &dash);
-void renderRegistrationScreen(Registration &reg);
 void renderControlInfo();
-void renderRegistrationAccountSection(Registration &reg, Color &colorScheme);
-void renderRegistrationPersonalSection(Registration &reg, Color &colorScheme);
-void renderRegistrationSelectionSection(Registration &reg, Color &colorScheme);
+void renderRegistrationScreenPatient(Registration &reg);
+void renderRegistrationAccountSectionPatient(Registration &reg, Color &colorScheme);
+void renderRegistrationPersonalSectionPatient(Registration &reg, Color &colorScheme);
+void renderRegistrationSelectionSectionPatient(Registration &reg, Color &colorScheme);
 void backHandlerRegistration(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body, Registration &reg, Color &colorScheme);
 void exitHandler();
 void renderHorizontalMenuStack(WINDOW *win, const std::vector<std::string> &items, const std::string &title, int y_offset, int &selected_index, int start_x);

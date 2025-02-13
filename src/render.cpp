@@ -231,7 +231,7 @@ void renderLoginScreen()
                 free_field(fields[i]);
             delwin(win_form);
             delwin(win_body);
-            eventManager.switchScreen(Screen::Register);
+            eventManager.switchScreen(Screen::RegisterPatient);
             return;
         case KEY_DC:
             form_driver(form, REQ_DEL_CHAR);
@@ -337,14 +337,14 @@ void backHandlerRegistration(FORM *form, FIELD **fields, WINDOW *win_form, WINDO
     switch (section)
     {
     case Registration::Section::selection:
-        renderRegistrationPersonalSection(reg, colorScheme);
+        renderRegistrationPersonalSectionPatient(reg, colorScheme);
         break;
     case Registration::Section::personal:
-        renderRegistrationAccountSection(reg, colorScheme);
+        renderRegistrationAccountSectionPatient(reg, colorScheme);
         break;
     case Registration::Section::account:
         reg.reset();
-        eventManager.switchScreen(Screen::Login);
+        eventManager.switchScreen(Screen::Database);
         break;
     default:
         break;
@@ -413,13 +413,13 @@ bool validateFields(FIELD **fields, Color &colorScheme)
     return true;
 }
 
-void renderRegistrationAccountSection(Registration &reg, Color &colorScheme)
+void renderRegistrationAccountSectionPatient(Registration &reg, Color &colorScheme)
 {
     renderHeader();
     renderControlInfo();
 
     int baseline = 11;
-    std::string header = "Register a MedTek+ Account";
+    std::string header = "Register a MedTek+ Patient Account";
     mvprintw(baseline, (COLS - header.length()) / 2, "%s", header.c_str());
 
     reg.currentSection = Registration::Section::account;
@@ -564,16 +564,16 @@ void renderRegistrationAccountSection(Registration &reg, Color &colorScheme)
     clear();
     refresh();
 
-    renderRegistrationPersonalSection(reg, colorScheme);
+    renderRegistrationPersonalSectionPatient(reg, colorScheme);
 }
 
-void renderRegistrationPersonalSection(Registration &reg, Color &colorScheme)
+void renderRegistrationPersonalSectionPatient(Registration &reg, Color &colorScheme)
 {
     renderHeader();
     renderControlInfo();
 
     int baseline = 11;
-    std::string header = "Register a MedTek+ Account";
+    std::string header = "Register a MedTek+ Patient Account";
     mvprintw(baseline, (COLS - header.length()) / 2, "%s", header.c_str());
 
     reg.currentSection = Registration::Section::personal;
@@ -723,7 +723,7 @@ void renderRegistrationPersonalSection(Registration &reg, Color &colorScheme)
     clear();
     refresh();
 
-    renderRegistrationSelectionSection(reg, colorScheme);
+    renderRegistrationSelectionSectionPatient(reg, colorScheme);
 }
 
 // Function to render a custom menu
@@ -808,7 +808,7 @@ bool submitRegistration(Registration &reg, Color &colorScheme)
     return false;
 }
 
-void renderRegistrationSelectionSection(Registration &reg, Color &colorScheme)
+void renderRegistrationSelectionSectionPatient(Registration &reg, Color &colorScheme)
 {
     renderHeader();
     renderControlInfo();
@@ -817,7 +817,7 @@ void renderRegistrationSelectionSection(Registration &reg, Color &colorScheme)
     bkgd(COLOR_PAIR(colorScheme.primary));
 
     int baseline = 11;
-    std::string header = "Register a MedTek+ Account";
+    std::string header = "Register a MedTek+ Patient Account";
     mvprintw(baseline, (COLS - header.length()) / 2, "%s", header.c_str());
     refresh();
 
@@ -923,9 +923,9 @@ void renderRegistrationSelectionSection(Registration &reg, Color &colorScheme)
     if (submitRegistration(reg, colorScheme))
     {
         wbkgd(status_win, COLOR_PAIR(colorScheme.primary));
-        printCentered(status_win, 1, "Registration SUCCESS! You will be redirected to the login page shortly.");
+        printCentered(status_win, 1, "Registration SUCCESS! You will be redirected to the database page shortly.");
         wrefresh(status_win);
-        std::this_thread::sleep_for(std::chrono::seconds(5));
+        std::this_thread::sleep_for(std::chrono::seconds(3));
         werase(status_win);
         wrefresh(status_win);
     }
@@ -934,7 +934,7 @@ void renderRegistrationSelectionSection(Registration &reg, Color &colorScheme)
         wbkgd(status_win, COLOR_PAIR(colorScheme.danger));
         printCentered(status_win, 1, "Registration FAILED! Please try again later.");
         wrefresh(status_win);
-        std::this_thread::sleep_for(std::chrono::seconds(5));
+        std::this_thread::sleep_for(std::chrono::seconds(3));
         werase(status_win);
         wrefresh(status_win);
     }
@@ -946,15 +946,169 @@ void renderRegistrationSelectionSection(Registration &reg, Color &colorScheme)
     refresh();
     reg.reset();
     EventManager &eventManager = EventManager::getInstance();
-    eventManager.switchScreen(Screen::Login);
+    eventManager.switchScreen(Screen::Database);
 }
 
-void renderRegistrationScreen(Registration &reg)
+void renderRegistrationScreenPatient(Registration &reg)
 {
     Color colorScheme;
     bkgd(COLOR_PAIR(colorScheme.primary));
-    renderRegistrationAccountSection(reg, colorScheme);
+    renderRegistrationAccountSectionPatient(reg, colorScheme);
 }
+
+// void renderRegistrationScreenAdmin()
+// {
+//     Color colorScheme;
+//     bkgd(COLOR_PAIR(colorScheme.primary));
+
+//     renderHeader();
+//     renderControlInfo();
+
+//     int baseline = 11;
+//     std::string header = "Register a MedTek+ Admin Account";
+//     mvprintw(baseline, (COLS - header.length()) / 2, "%s", header.c_str());
+
+//     bkgd(COLOR_PAIR(colorScheme.primary));
+
+//     int outer_height = 16;
+//     int outer_width = 60;
+
+//     int start_y = ((LINES - outer_height) / 2) + 2;
+//     int start_x = (COLS - outer_width) / 2;
+
+//     WINDOW *win_body = newwin(outer_height, outer_width, start_y, start_x);
+//     wbkgd(win_body, COLOR_PAIR(colorScheme.primary));
+//     box(win_body, 0, 0);
+
+//     std::string subHeader = "Account Information";
+//     mvwprintw(win_body, 1, (outer_width - subHeader.length()) / 2, "%s", subHeader.c_str());
+
+//     int inner_height = outer_height - 4;
+//     int inner_width = outer_width - 4;
+
+//     WINDOW *win_form = derwin(win_body, inner_height, inner_width, 2, 2);
+//     wbkgd(win_form, COLOR_PAIR(colorScheme.primary));
+//     box(win_form, 0, 0);
+
+//     FIELD *fields[11];
+//     fields[0] = new_field(1, 10, 0, 1, 0, 0);  // Label: Username
+//     fields[1] = new_field(1, 30, 0, 13, 0, 0); // Input: Username
+//     fields[2] = new_field(1, 10, 2, 1, 0, 0);  // Label: Password
+//     fields[3] = new_field(1, 30, 2, 13, 0, 0); // Input: Password
+//     fields[4] = new_field(1, 10, 4, 1, 0, 0);  // Label: Email
+//     fields[5] = new_field(1, 30, 4, 13, 0, 0); // Input: Email
+//     fields[6] = new_field(1, 10, 6, 1, 0, 0);  // Label: Address
+//     fields[7] = new_field(1, 30, 6, 13, 0, 0); // Input: Address
+//     fields[8] = new_field(1, 16, 8, 1, 0, 0);  // Label: Contact Number
+//     fields[9] = new_field(1, 30, 8, 20, 0, 0); // Input: Contact Number
+//     fields[10] = NULL;
+
+//     assert(fields[0] && fields[1] && fields[2] && fields[3] && fields[4] &&
+//            fields[5] && fields[6] && fields[7] && fields[8] && fields[9]);
+
+//     set_field_buffer(fields[0], 0, "Username:");
+//     set_field_buffer(fields[1], 0, reg.username.c_str());
+//     set_field_buffer(fields[2], 0, "Password:");
+//     set_field_buffer(fields[3], 0, reg.password.c_str());
+//     set_field_buffer(fields[4], 0, "Email:");
+//     set_field_buffer(fields[5], 0, reg.email.c_str());
+//     set_field_buffer(fields[6], 0, "Address:");
+//     set_field_buffer(fields[7], 0, reg.address.c_str());
+//     set_field_buffer(fields[8], 0, "Contact Number:");
+//     set_field_buffer(fields[9], 0, reg.contactNumber.c_str());
+
+//     // Set field options
+//     for (int i = 0; fields[i]; i++)
+//     {
+//         if (i % 2 == 0)
+//         {                                                               // Labels
+//             set_field_opts(fields[i], O_VISIBLE | O_PUBLIC | O_STATIC); // Read-only
+//         }
+//         else
+//         { // Input fields
+//             set_field_opts(fields[i], O_VISIBLE | O_PUBLIC | O_EDIT | O_ACTIVE | O_AUTOSKIP);
+//         }
+//         set_field_back(fields[i], COLOR_PAIR(colorScheme.primary)); // Set background color
+//     }
+
+//     // Create and post form
+//     FORM *form = new_form(fields);
+//     assert(form);
+//     set_form_win(form, win_form);
+//     set_form_sub(form, derwin(win_form, inner_height - 2, inner_width - 2, 1, 1));
+//     post_form(form);
+
+//     // Refresh windows
+//     wrefresh(win_body);
+//     wrefresh(win_form);
+
+//     // Create a dedicated error window
+//     int error_win_height = 1;
+//     int error_win_width = 32;
+//     int error_win_y = LINES - 2;
+//     int error_win_x = (COLS - error_win_width) / 2;
+
+//     WINDOW *error_win = newwin(error_win_height, error_win_width, error_win_y, error_win_x);
+//     wbkgd(error_win, COLOR_PAIR(colorScheme.danger));
+
+//     // Input loop
+//     bool done = false;
+//     int ch;
+
+//     while (!done)
+//     {
+//         while ((ch = getch()) != '\n')
+//         {
+//             driver_form(
+//                 ch,
+//                 form,
+//                 fields,
+//                 win_form,
+//                 win_body,
+//                 [&]()
+//                 { exitHandler(); },
+//                 [&]()
+//                 { backHandlerRegistration(form, fields, win_form, win_body, reg, colorScheme); });
+//         }
+//         form_driver(form, REQ_VALIDATION);
+//         if (!validateFields(fields, colorScheme))
+//         {
+//             mvwprintw(error_win, 0, 0, "Please fill all required fields");
+//             wrefresh(error_win);
+//             std::this_thread::sleep_for(std::chrono::seconds(2));
+//             werase(error_win);
+//             wrefresh(error_win);
+//         }
+//         else
+//         {
+//             done = true;
+//         }
+//     }
+
+//     form_driver(form, REQ_VALIDATION);
+
+//     // Extract form data
+//     reg.username = trim_whitespaces(field_buffer(fields[1], 0));
+//     reg.password = trim_whitespaces(field_buffer(fields[3], 0));
+//     reg.email = trim_whitespaces(field_buffer(fields[5], 0));
+//     reg.address = trim_whitespaces(field_buffer(fields[7], 0));
+//     reg.contactNumber = trim_whitespaces(field_buffer(fields[9], 0));
+
+//     // Clean up
+//     unpost_form(form);
+//     free_form(form);
+//     for (int i = 0; fields[i]; i++)
+//     {
+//         free_field(fields[i]);
+//     }
+//     wclear(win_form);
+//     wclear(win_body);
+//     delwin(win_form);
+//     delwin(win_body);
+//     delwin(error_win);
+//     clear();
+//     refresh();
+// }
 
 void handleDashboardOptions(Dashboard &dash, std::string &roleStr)
 {
@@ -962,7 +1116,7 @@ void handleDashboardOptions(Dashboard &dash, std::string &roleStr)
     switch (dash.selectedIndex)
     {
     case 0:
-        eventManager.switchScreen(roleStr == "patient" ? Screen::Appointments : Screen::Database);
+        eventManager.switchScreen(Screen::Database);
         dash.reset();
         break;
     case 1:
@@ -1024,7 +1178,6 @@ void renderDashboardScreen(Dashboard &dash)
     curs_set(0);
 
     std::string roleStr = currentUser->getRoleToString(currentUser->role);
-    std::vector<std::string> menuOptions = roleStr == "patient" ? dash.patientOptionsArr : dash.adminOptionsArr;
 
     while (!done)
     {
@@ -1033,10 +1186,10 @@ void renderDashboardScreen(Dashboard &dash)
         box(win_form, 0, 0);
 
         // Render menu options
-        for (int i = 0; i < static_cast<int>(menuOptions.size()); ++i)
+        for (int i = 0; i < static_cast<int>(dash.optionsArr.size()); ++i)
         {
             // Calculate the horizontal position to center the option
-            int optionLength = menuOptions[i].length();
+            int optionLength = dash.optionsArr[i].length();
             int xPos = (inner_width - optionLength) / 2;
 
             if (i == dash.selectedIndex)
@@ -1044,7 +1197,7 @@ void renderDashboardScreen(Dashboard &dash)
                 wattron(win_form, A_REVERSE); // Highlight the selected option
             }
 
-            mvwprintw(win_form, 2 + (i * 2), xPos, "%s", menuOptions[i].c_str());
+            mvwprintw(win_form, 2 + (i * 2), xPos, "%s", dash.optionsArr[i].c_str());
 
             if (i == dash.selectedIndex)
             {
@@ -1062,12 +1215,12 @@ void renderDashboardScreen(Dashboard &dash)
             dash.selectedIndex--;
             if (dash.selectedIndex < 0)
             {
-                dash.selectedIndex = menuOptions.size() - 1; // Wrap around to the last option
+                dash.selectedIndex = dash.optionsArr.size() - 1; // Wrap around to the last option
             }
             break;
         case KEY_DOWN:
             dash.selectedIndex++;
-            if (dash.selectedIndex >= static_cast<int>(menuOptions.size()))
+            if (dash.selectedIndex >= static_cast<int>(dash.optionsArr.size()))
             {
                 dash.selectedIndex = 0; // Wrap around to the first option
             }
@@ -1132,6 +1285,48 @@ void renderDatabaseControlInfo(Database &db, Color &colorScheme)
     delwin(win_outer);
 }
 
+void handleDatabaseControls(Database &db, UserManager &userManager)
+{
+    if (db.listMatrixCurrent.empty())
+        return;
+    switch (db.selectedCol)
+    {
+    case 3:
+        userManager.deleteUserById(db.listMatrixCurrent[db.selectedRow][db.listMatrixCurrent[db.selectedRow].size() - 1]);
+
+        // Refresh the records after deletion
+        if (db.currentFilter == Database::Filter::patient)
+        {
+            db.patientRecords = userManager.getPatients(db.searchQuery);
+            db.generateListMatrixPatient(db.patientRecords);
+        }
+        else
+        {
+            db.adminRecords = userManager.getAdmins(db.searchQuery);
+            db.generateListMatrixAdmin(db.adminRecords);
+        }
+
+        // **Update the page content first**
+        db.listMatrixCurrent = db.currentFilter == Database::Filter::patient ? db.getCurrentPagePatient() : db.getCurrentPageAdmin();
+
+        // **If the current page is empty, move to the previous page**
+        while (db.listMatrixCurrent.empty() && db.currentPage > 0)
+        {
+            db.currentPage--;
+            db.listMatrixCurrent = db.currentFilter == Database::Filter::patient ? db.getCurrentPagePatient() : db.getCurrentPageAdmin();
+        }
+
+        // Adjust db.selectedRow to avoid out-of-bounds selection
+        if (db.selectedRow >= static_cast<int>(db.listMatrixCurrent.size()))
+        {
+            db.selectedRow = std::max(0, static_cast<int>(db.listMatrixCurrent.size()) - 1);
+        }
+        break;
+    default:
+        break;
+    }
+}
+
 void renderDatabaseScreen(Database &db)
 {
     Color colorScheme;
@@ -1168,19 +1363,17 @@ void renderDatabaseScreen(Database &db)
     box(win_form, 0, 0);
     wrefresh(win_form);
 
-    std::vector<std::pair<std::string, std::string>> patientRecords = userManager.getPatients(db.searchQuery);
-    std::vector<std::pair<std::string, std::string>> adminRecords = userManager.getAdmins(db.searchQuery);
+    db.patientRecords = userManager.getPatients(db.searchQuery);
+    db.adminRecords = userManager.getAdmins(db.searchQuery);
 
-    db.generateListMatrixPatient(patientRecords);
-    db.generateListMatrixAdmin(adminRecords);
+    db.generateListMatrixPatient(db.patientRecords);
+    db.generateListMatrixAdmin(db.adminRecords);
     db.listMatrixCurrent = db.getCurrentPagePatient(); // Initialize with first page of patient records
-
-    int selectedRow = -1;
-    int selectedCol = 1; // Start at first button
     bool done = false;
 
     keypad(win_form, TRUE);
     curs_set(0); // Start with cursor hidden
+    int ch;
 
     while (!done)
     {
@@ -1219,12 +1412,12 @@ void renderDatabaseScreen(Database &db)
                         xPos += 5; // Adjust spacing for buttons
 
                     // Highlight selected item
-                    if (i == selectedRow && j == selectedCol)
+                    if (i == db.selectedRow && j == db.selectedCol)
                         wattron(win_form, A_REVERSE);
 
                     mvwprintw(win_form, yPos, xPos, "%s", db.listMatrixCurrent[i][j].c_str());
 
-                    if (i == selectedRow && j == selectedCol)
+                    if (i == db.selectedRow && j == db.selectedCol)
                         wattroff(win_form, A_REVERSE);
 
                     xPos += inner_width / db.listMatrixCurrent[i].size();
@@ -1233,7 +1426,7 @@ void renderDatabaseScreen(Database &db)
         }
 
         // Position the cursor in the search bar if selected
-        if (selectedRow == -1)
+        if (db.selectedRow == -1)
         {
             curs_set(1);                                 // Show cursor
             wmove(win_form, 1, 2 + searchText.length()); // Move cursor to end of search text
@@ -1245,9 +1438,9 @@ void renderDatabaseScreen(Database &db)
 
         wrefresh(win_form);
 
-        int ch = wgetch(win_form);
+        ch = wgetch(win_form);
 
-        if (selectedRow == -1)
+        if (db.selectedRow == -1)
         {
             if (ch == KEY_BACKSPACE || ch == 127) // Handle backspace
             {
@@ -1262,14 +1455,14 @@ void renderDatabaseScreen(Database &db)
             // Regenerate list dynamically
             if (db.currentFilter == Database::Filter::patient)
             {
-                patientRecords = userManager.getPatients(db.searchQuery);
-                db.generateListMatrixPatient(patientRecords);
+                db.patientRecords = userManager.getPatients(db.searchQuery);
+                db.generateListMatrixPatient(db.patientRecords);
                 db.listMatrixCurrent = db.getCurrentPagePatient();
             }
             else
             {
-                adminRecords = userManager.getAdmins(db.searchQuery);
-                db.generateListMatrixAdmin(adminRecords);
+                db.adminRecords = userManager.getAdmins(db.searchQuery);
+                db.generateListMatrixAdmin(db.adminRecords);
                 db.listMatrixCurrent = db.getCurrentPageAdmin();
             }
         }
@@ -1279,68 +1472,38 @@ void renderDatabaseScreen(Database &db)
         switch (ch)
         {
         case '\n':
-            if (db.listMatrixCurrent.empty())
-                break;
-            if (selectedCol == 3) // Delete button
-            {
-                userManager.deleteUserById(db.listMatrixCurrent[selectedRow][db.listMatrixCurrent[selectedRow].size() - 1]);
-
-                // Refresh the records after deletion
-                if (db.currentFilter == Database::Filter::patient)
-                {
-                    patientRecords = userManager.getPatients(db.searchQuery);
-                    db.generateListMatrixPatient(patientRecords);
-                }
-                else
-                {
-                    adminRecords = userManager.getAdmins(db.searchQuery);
-                    db.generateListMatrixAdmin(adminRecords);
-                }
-
-                // **Update the page content first**
-                db.listMatrixCurrent = db.currentFilter == Database::Filter::patient ? db.getCurrentPagePatient() : db.getCurrentPageAdmin();
-
-                // **If the current page is empty, move to the previous page**
-                while (db.listMatrixCurrent.empty() && db.currentPage > 0)
-                {
-                    db.currentPage--;
-                    db.listMatrixCurrent = db.currentFilter == Database::Filter::patient ? db.getCurrentPagePatient() : db.getCurrentPageAdmin();
-                }
-
-                // Adjust selectedRow to avoid out-of-bounds selection
-                if (selectedRow >= static_cast<int>(db.listMatrixCurrent.size()))
-                {
-                    selectedRow = std::max(0, static_cast<int>(db.listMatrixCurrent.size()) - 1);
-                }
-            }
+            handleDatabaseControls(db, userManager);
+            break;
+        case '+':
+            done = true;
             break;
         case KEY_DOWN:
-            if (selectedRow < static_cast<int>(db.listMatrixCurrent.size() - 1))
-                selectedRow++;
+            if (db.selectedRow < static_cast<int>(db.listMatrixCurrent.size() - 1))
+                db.selectedRow++;
             break;
         case KEY_UP:
-            if (selectedRow > -1)
-                selectedRow--;
+            if (db.selectedRow > -1)
+                db.selectedRow--;
             break;
         case KEY_LEFT:
-            if (selectedRow > -1 && selectedCol > 1)
-                selectedCol--;
+            if (db.selectedRow > -1 && db.selectedCol > 1)
+                db.selectedCol--;
             break;
         case KEY_RIGHT:
-            if (selectedRow > -1 && selectedCol < static_cast<int>(db.listMatrixCurrent[selectedRow].size() - 2))
-                selectedCol++;
+            if (db.selectedRow > -1 && db.selectedCol < static_cast<int>(db.listMatrixCurrent[db.selectedRow].size() - 2))
+                db.selectedCol++;
             break;
         case 9: // Tab key to switch filters
             db.currentFilter = (db.currentFilter == Database::Filter::patient) ? Database::Filter::admin : Database::Filter::patient;
             db.currentPage = 0;     // Reset page when switching filters
             db.searchQuery.clear(); // Clear search query on tab switch
-            patientRecords = userManager.getPatients("");
-            adminRecords = userManager.getAdmins("");
-            db.generateListMatrixPatient(patientRecords);
-            db.generateListMatrixAdmin(adminRecords);
+            db.patientRecords = userManager.getPatients("");
+            db.adminRecords = userManager.getAdmins("");
+            db.generateListMatrixPatient(db.patientRecords);
+            db.generateListMatrixAdmin(db.adminRecords);
             db.listMatrixCurrent = db.currentFilter == Database::Filter::patient ? db.getCurrentPagePatient() : db.getCurrentPageAdmin();
-            selectedRow = -1;
-            selectedCol = 1;
+            db.selectedRow = -1;
+            db.selectedCol = 1;
             break;
         case KEY_PPAGE: // Page Up
             if (db.currentPage > 0)
@@ -1376,5 +1539,14 @@ void renderDatabaseScreen(Database &db)
     wclear(win_body);
     delwin(win_form);
     delwin(win_body);
-    eventManager.switchScreen(Screen::Dashboard);
+    db.reset();
+    switch (ch)
+    {
+    case '+':
+        eventManager.switchScreen(Screen::RegisterPatient);
+        break;
+    default:
+        eventManager.switchScreen(Screen::Dashboard);
+        break;
+    }
 }
