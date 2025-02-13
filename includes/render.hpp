@@ -19,6 +19,7 @@
 #include <ncursesw/menu.h>
 #include <cctype>
 #include <math.h>
+#include <algorithm>
 
 #include <csignal>
 #if defined(_WIN32) || defined(_WIN64)
@@ -168,8 +169,8 @@ struct Dashboard
 struct Database
 {
     std::vector<std::string> controlInfoArr = {
-        "1) PgDn (prev page)",
-        "2) PgUp (next page)",
+        "1) PgDn (next page)",
+        "2) PgUp (prev page)",
         "3) Tab (switch role)",
         "4) + (create record)"};
     std::vector<std::string> recordOptionsArr = {
@@ -188,9 +189,7 @@ struct Database
     Filter currentFilter = Filter::patient;
 
     // Matrix structure (rows are records)
-    std::vector<std::vector<std::string>> listMatrixPatient;
-    std::vector<std::vector<std::string>> listMatrixAdmin;
-    std::vector<std::vector<std::string>> listMatrixCurrent;
+    std::vector<std::vector<std::string>> listMatrixPatient, listMatrixAdmin, listMatrixCurrent;
 
     int currentPage = 0;
     int pageSize = 10; // Number of records per page
@@ -204,24 +203,24 @@ struct Database
         searchQuery = "";
     }
 
-    void generateListMatrixPatient(const std::vector<std::string> &records)
+    void generateListMatrixPatient(const std::vector<std::pair<std::string, std::string>> &records)
     {
         listMatrixPatient.clear();
         for (const auto &record : records)
         {
-            listMatrixPatient.push_back({record, "[View]", "[Update]", "[Delete]"});
+            listMatrixPatient.push_back({record.first, "[View]", "[Update]", "[Delete]", record.second});
         }
-        totalPagesPatient = (listMatrixPatient.size() + pageSize - 1) / pageSize; // Calculate total pages
+        totalPagesPatient = listMatrixPatient.empty() ? 0 : (listMatrixPatient.size() - 1) / pageSize + 1;
     }
 
-    void generateListMatrixAdmin(const std::vector<std::string> &records)
+    void generateListMatrixAdmin(const std::vector<std::pair<std::string, std ::string>> &records)
     {
         listMatrixAdmin.clear();
         for (const auto &record : records)
         {
-            listMatrixAdmin.push_back({record, "[View]", "[Update]", "[Delete]"});
+            listMatrixAdmin.push_back({record.first, "[View]", "[Update]", "[Delete]", record.second});
         }
-        totalPagesAdmin = (listMatrixAdmin.size() + pageSize - 1) / pageSize; // Calculate total pages
+        totalPagesAdmin = listMatrixAdmin.empty() ? 0 : (listMatrixAdmin.size() - 1) / pageSize + 1;
     }
 
     std::vector<std::vector<std::string>> getCurrentPageAdmin()
@@ -241,6 +240,7 @@ struct Database
     {
         int startIndex = currentPage * pageSize;
         int endIndex = std::min(startIndex + pageSize, static_cast<int>(listMatrixPatient.size()));
+
         std::vector<std::vector<std::string>> res;
 
         for (int i = startIndex; i < endIndex; i++)
@@ -265,7 +265,7 @@ void renderRegistrationPersonalSection(Registration &reg, Color &colorScheme);
 void renderRegistrationSelectionSection(Registration &reg, Color &colorScheme);
 void backHandlerRegistration(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body, Registration &reg, Color &colorScheme);
 void exitHandler();
-void renderHorizontalMenuStack(WINDOW *win, const std::vector<std::string> &items, const std::string &title, int y_offset, int &selected_index);
+void renderHorizontalMenuStack(WINDOW *win, const std::vector<std::string> &items, const std::string &title, int y_offset, int &selected_index, int start_x);
 bool validateFields(FIELD **fields, Color &colorScheme);
 int calculateAge(const std::string &identityCardNumber);
 double calculateBMI(const std::string &weight, const std::string &height);

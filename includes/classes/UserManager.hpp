@@ -8,6 +8,7 @@
 #include "User.hpp"
 #include "Admin.hpp"
 #include "Patient.hpp"
+#include "utils.hpp"
 
 class UserManager
 {
@@ -61,14 +62,13 @@ private:
 		for (const auto &role : roles)
 		{
 			std::string roleStr = User::getRoleToString(role);
-			std::string filePath = "db/" + roleStr + "/";
+			std::string filePath = "db/" + roleStr + "/" + userId + ".json";
 
 			if (fs::exists(filePath))
 			{
 				try
 				{
 					fs::remove(filePath);
-					std::cout << "Deleted user file: " << filePath << std::endl;
 					return true;
 				}
 				catch (const std::exception &e)
@@ -195,22 +195,23 @@ public:
 			userMap[userId] = user;
 			return user;
 		}
-
-		std::cout << "User with ID " << userId << " not found.\n";
 		return nullptr;
 	}
 
 	// Search record by username
 	std::shared_ptr<User> getUserByUsername(const std::string &username)
 	{
+		std::string trimmedUsername = toLower(trim(username)); // Trim input username
+
 		// Check in-memory cache first
 		for (const auto &pair : userMap)
 		{
-			if (pair.second->getUsername() == username)
+			if (toLower(trim(pair.second->getUsername())) == trimmedUsername)
 			{
 				return pair.second;
 			}
 		}
+
 		// If not found in memory, check the folder-based database (by role)
 		std::vector<Role> roles = {Role::Admin, Role::Patient, Role::User};
 		for (const auto &role : roles)
@@ -231,7 +232,7 @@ public:
 							file >> j;
 							file.close();
 
-							if (j.contains("username") && j["username"] == username)
+							if (j.contains("username") && toLower(trim(j["username"].get<std::string>())) == trimmedUsername)
 							{
 								auto user = getUserFromFile(j["id"], roleStr);
 								if (user)
@@ -245,7 +246,6 @@ public:
 			}
 			catch (const std::exception &e)
 			{
-
 				return nullptr;
 			}
 		}
@@ -255,15 +255,18 @@ public:
 	// Search record by name
 	std::shared_ptr<User> getUserByName(const std::string &fullName)
 	{
+		std::string trimmedName = toLower(trim(fullName));
+
 		// Check in-memory cache first
 		for (const auto &pair : userMap)
 		{
-			if (pair.second->getFullName() == fullName)
+			if (toLower(trim(pair.second->getFullName())) == trimmedName)
 			{
 				return pair.second;
 			}
 		}
-		// If not found in memory, check the folder-based database (by role)
+
+		// Check the folder-based database
 		std::vector<Role> roles = {Role::Admin, Role::Patient, Role::User};
 		for (const auto &role : roles)
 		{
@@ -283,7 +286,7 @@ public:
 							file >> j;
 							file.close();
 
-							if (j.contains("fullName") && j["fullName"] == fullName)
+							if (j.contains("fullName") && toLower(trim(j["fullName"])) == trimmedName)
 							{
 								auto user = getUserFromFile(j["id"], roleStr);
 								if (user)
@@ -297,7 +300,6 @@ public:
 			}
 			catch (const std::exception &e)
 			{
-
 				return nullptr;
 			}
 		}
@@ -314,11 +316,7 @@ public:
 		}
 		// If not found in memory, check the folder-based database (by role)
 		bool isDeleted = deleteUserFromFile(userId);
-		if (isDeleted)
-		{
-			std::cout << "User with ID " << userId << " deleted successfully.\n";
-		}
-		else if (!isDeleted)
+		if (!isDeleted)
 		{
 			std::cout << "User with ID " << userId << " not found.\n";
 		}
@@ -503,33 +501,49 @@ public:
 	{
 		return currentUser;
 	}
-	std::vector<std::string> getAdminNames()
+	std::vector<std::pair<std::string, std::string>> getAdmins(const std::string &query)
 	{
-		std::vector<std::string> adminNames;
+		std::vector<std::pair<std::string, std::string>> res;
+		std::string filteredQuery = query.empty() ? "" : toLower(trim(query));
 
 		for (const auto &pair : userMap)
 		{
 			const std::shared_ptr<User> &userPtr = pair.second;
 			if (userPtr && userPtr->role == Role::Admin)
 			{
-				adminNames.push_back(userPtr->getFullName());
+				if (filteredQuery.empty() ||
+					toLower(userPtr->getFullName()).find(filteredQuery) != std::string::npos ||
+					toLower(userPtr->getId()).find(filteredQuery) != std::string::npos ||
+					toLower(userPtr->getUsername()).find(filteredQuery) != std::string::npos)
+
+				{
+					res.push_back({userPtr->getFullName(), userPtr->getId()});
+				}
 			}
 		}
-		return adminNames;
+		return res;
 	}
-	std::vector<std::string> getPatientNames()
+
+	std::vector<std::pair<std::string, std::string>> getPatients(const std::string &query)
 	{
-		std::vector<std::string> patientNames;
+		std::vector<std::pair<std::string, std::string>> res;
+		std::string filteredQuery = query.empty() ? "" : toLower(trim(query));
 
 		for (const auto &pair : userMap)
 		{
 			const std::shared_ptr<User> &userPtr = pair.second;
 			if (userPtr && userPtr->role == Role::Patient)
 			{
-				patientNames.push_back(userPtr->getFullName());
+				if (filteredQuery.empty() ||
+					toLower(userPtr->getFullName()).find(filteredQuery) != std::string::npos ||
+					toLower(userPtr->getId()).find(filteredQuery) != std::string::npos ||
+					toLower(userPtr->getUsername()).find(filteredQuery) != std::string::npos)
+				{
+					res.push_back({userPtr->getFullName(), userPtr->getId()});
+				}
 			}
 		}
-		return patientNames;
+		return res;
 	}
 };
 

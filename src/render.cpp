@@ -1168,15 +1168,15 @@ void renderDatabaseScreen(Database &db)
     box(win_form, 0, 0);
     wrefresh(win_form);
 
-    std::vector<std::string> patientRecords = userManager.getPatientNames();
-    std::vector<std::string> adminRecords = userManager.getAdminNames();
+    std::vector<std::pair<std::string, std::string>> patientRecords = userManager.getPatients(db.searchQuery);
+    std::vector<std::pair<std::string, std::string>> adminRecords = userManager.getAdmins(db.searchQuery);
 
     db.generateListMatrixPatient(patientRecords);
     db.generateListMatrixAdmin(adminRecords);
     db.listMatrixCurrent = db.getCurrentPagePatient(); // Initialize with first page of patient records
 
-    size_t selectedRow = 0;
-    size_t selectedCol = 1; // Start at first button
+    int selectedRow = -1;
+    int selectedCol = 1; // Start at first button
     bool done = false;
 
     keypad(win_form, TRUE);
@@ -1201,31 +1201,39 @@ void renderDatabaseScreen(Database &db)
         mvwprintw(win_form, 1, 2, "%s", searchText.c_str());
 
         // Render the list matrix for the current page
-        for (size_t i = 1; i < db.listMatrixCurrent.size(); i++)
+        if (db.listMatrixCurrent.empty())
         {
-            int xPos = 2;
-            int yPos = 1 + (i * 2);
-
-            for (size_t j = 0; j < db.listMatrixCurrent[i].size(); j++)
+            std::string emptyText = "No records found.";
+            mvwprintw(win_form, 4, (inner_width - emptyText.length()) / 2, "%s", emptyText.c_str());
+        }
+        else
+        {
+            for (int i = 0; i < static_cast<int>(db.listMatrixCurrent.size()); i++)
             {
-                if (j == 1)
-                    xPos += 5; // Adjust spacing for buttons
+                int xPos = 2;
+                int yPos = 3 + (i * 2);
 
-                // Highlight selected item
-                if (i == selectedRow && j == selectedCol)
-                    wattron(win_form, A_REVERSE);
+                for (int j = 0; j < static_cast<int>(db.listMatrixCurrent[i].size() - 1); j++)
+                {
+                    if (j == 1)
+                        xPos += 5; // Adjust spacing for buttons
 
-                mvwprintw(win_form, yPos, xPos, "%s", db.listMatrixCurrent[i][j].c_str());
+                    // Highlight selected item
+                    if (i == selectedRow && j == selectedCol)
+                        wattron(win_form, A_REVERSE);
 
-                if (i == selectedRow && j == selectedCol)
-                    wattroff(win_form, A_REVERSE);
+                    mvwprintw(win_form, yPos, xPos, "%s", db.listMatrixCurrent[i][j].c_str());
 
-                xPos += inner_width / db.listMatrixCurrent[i].size();
+                    if (i == selectedRow && j == selectedCol)
+                        wattroff(win_form, A_REVERSE);
+
+                    xPos += inner_width / db.listMatrixCurrent[i].size();
+                }
             }
         }
 
         // Position the cursor in the search bar if selected
-        if (selectedRow == 0)
+        if (selectedRow == -1)
         {
             curs_set(1);                                 // Show cursor
             wmove(win_form, 1, 2 + searchText.length()); // Move cursor to end of search text
@@ -1239,91 +1247,115 @@ void renderDatabaseScreen(Database &db)
 
         int ch = wgetch(win_form);
 
-        if (selectedRow == 0)
+        if (selectedRow == -1)
         {
             if (ch == KEY_BACKSPACE || ch == 127) // Handle backspace
             {
                 if (!db.searchQuery.empty())
                     db.searchQuery.pop_back();
             }
-            else if (ch == '\n')
-            {
-                // Optional: Trigger search when Enter is pressed
-            }
             else if (ch >= 32 && ch <= 126) // Allow printable characters
             {
+                db.currentPage = 0;
                 db.searchQuery += static_cast<char>(ch);
             }
-
             // Regenerate list dynamically
             if (db.currentFilter == Database::Filter::patient)
             {
+                patientRecords = userManager.getPatients(db.searchQuery);
                 db.generateListMatrixPatient(patientRecords);
                 db.listMatrixCurrent = db.getCurrentPagePatient();
             }
             else
             {
+                adminRecords = userManager.getAdmins(db.searchQuery);
                 db.generateListMatrixAdmin(adminRecords);
                 db.listMatrixCurrent = db.getCurrentPageAdmin();
             }
         }
 
         // Handle input (Navigation, Tab Switching, etc.)
+
         switch (ch)
         {
+        case '\n':
+            if (db.listMatrixCurrent.empty())
+                break;
+            if (selectedCol == 3) // Delete button
+            {
+                userManager.deleteUserById(db.listMatrixCurrent[selectedRow][db.listMatrixCurrent[selectedRow].size() - 1]);
+
+                // Refresh the records after deletion
+                if (db.currentFilter == Database::Filter::patient)
+                {
+                    patientRecords = userManager.getPatients(db.searchQuery);
+                    db.generateListMatrixPatient(patientRecords);
+                }
+                else
+                {
+                    adminRecords = userManager.getAdmins(db.searchQuery);
+                    db.generateListMatrixAdmin(adminRecords);
+                }
+
+                // **Update the page content first**
+                db.listMatrixCurrent = db.currentFilter == Database::Filter::patient ? db.getCurrentPagePatient() : db.getCurrentPageAdmin();
+
+                // **If the current page is empty, move to the previous page**
+                while (db.listMatrixCurrent.empty() && db.currentPage > 0)
+                {
+                    db.currentPage--;
+                    db.listMatrixCurrent = db.currentFilter == Database::Filter::patient ? db.getCurrentPagePatient() : db.getCurrentPageAdmin();
+                }
+
+                // Adjust selectedRow to avoid out-of-bounds selection
+                if (selectedRow >= static_cast<int>(db.listMatrixCurrent.size()))
+                {
+                    selectedRow = std::max(0, static_cast<int>(db.listMatrixCurrent.size()) - 1);
+                }
+            }
+            break;
         case KEY_DOWN:
-            if (selectedRow < static_cast<size_t>(db.listMatrixCurrent.size()) - 1)
+            if (selectedRow < static_cast<int>(db.listMatrixCurrent.size() - 1))
                 selectedRow++;
             break;
         case KEY_UP:
-            if (selectedRow > 0)
+            if (selectedRow > -1)
                 selectedRow--;
             break;
         case KEY_LEFT:
-            if (selectedRow > 0 && selectedCol > 1)
+            if (selectedRow > -1 && selectedCol > 1)
                 selectedCol--;
             break;
         case KEY_RIGHT:
-            if (selectedRow > 0 && selectedCol < static_cast<size_t>(db.listMatrixCurrent[selectedRow].size()) - 1)
+            if (selectedRow > -1 && selectedCol < static_cast<int>(db.listMatrixCurrent[selectedRow].size() - 2))
                 selectedCol++;
             break;
         case 9: // Tab key to switch filters
             db.currentFilter = (db.currentFilter == Database::Filter::patient) ? Database::Filter::admin : Database::Filter::patient;
-            db.currentPage = 0; // Reset to first page when switching filters
-            if (db.currentFilter == Database::Filter::patient)
-            {
-                db.generateListMatrixPatient(patientRecords);
-                db.listMatrixCurrent = db.getCurrentPagePatient();
-            }
-            else
-            {
-                db.generateListMatrixAdmin(adminRecords);
-                db.listMatrixCurrent = db.getCurrentPageAdmin();
-            }
-            selectedRow = 0;
-            selectedCol = 1; // Reset selection
+            db.currentPage = 0;     // Reset page when switching filters
+            db.searchQuery.clear(); // Clear search query on tab switch
+            patientRecords = userManager.getPatients("");
+            adminRecords = userManager.getAdmins("");
+            db.generateListMatrixPatient(patientRecords);
+            db.generateListMatrixAdmin(adminRecords);
+            db.listMatrixCurrent = db.currentFilter == Database::Filter::patient ? db.getCurrentPagePatient() : db.getCurrentPageAdmin();
+            selectedRow = -1;
+            selectedCol = 1;
             break;
-        case KEY_NPAGE: // Page Up
+        case KEY_PPAGE: // Page Up
             if (db.currentPage > 0)
             {
                 db.currentPage--;
-                if (db.currentFilter == Database::Filter::patient)
-                {
-                    db.listMatrixCurrent = db.getCurrentPagePatient();
-                }
-                else
-                {
-                    db.listMatrixCurrent = db.getCurrentPageAdmin();
-                }
+                db.listMatrixCurrent = db.currentFilter == Database::Filter::patient ? db.getCurrentPagePatient() : db.getCurrentPageAdmin();
             }
             break;
-        case KEY_PPAGE: // Page Down
-            if (db.currentFilter == Database::Filter::patient && db.currentPage < db.totalPagesPatient - 1)
+        case KEY_NPAGE: // Page Down
+            if (db.currentFilter == Database::Filter::patient && db.currentPage + 1 < db.totalPagesPatient)
             {
                 db.currentPage++;
                 db.listMatrixCurrent = db.getCurrentPagePatient();
             }
-            else if (db.currentFilter == Database::Filter::admin && db.currentPage < db.totalPagesAdmin - 1)
+            else if (db.currentFilter == Database::Filter::admin && db.currentPage + 1 < db.totalPagesAdmin)
             {
                 db.currentPage++;
                 db.listMatrixCurrent = db.getCurrentPageAdmin();
