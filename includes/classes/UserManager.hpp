@@ -9,6 +9,7 @@
 #include "Admin.hpp"
 #include "Patient.hpp"
 #include "utils.hpp"
+#include "Admissions.hpp"
 
 class UserManager
 {
@@ -137,12 +138,12 @@ public:
 					   const std::string &identityCardNumber, const std::string &maritalStatus, const std::string &gender,
 					   const std::string &race, const std::string &email, const std::string &contactNumber,
 					   const std::string &emergencyContactNumber, const std::string &emergencyContactName, const std::string &address,
-					   double bmi, const std::string &height, const std::string &weight)
+					   double bmi, const std::string &height, const std::string &weight, Admissions::Department dept)
 	{
 		std::shared_ptr<Patient> newPatient = std::make_shared<Patient>(
 			username, password, age, fullName, religion, nationality, identityCardNumber,
 			maritalStatus, gender, race, email, contactNumber, emergencyContactNumber, emergencyContactName,
-			address, bmi, height, weight);
+			address, bmi, height, weight, dept);
 
 		auto result = userMap.insert({newPatient->getId(), newPatient});
 		if (!result.second)
@@ -434,7 +435,20 @@ public:
 				{"height", [&patient](const std::string &value)
 				 { patient->height = value; }},
 				{"weight", [&patient](const std::string &value)
-				 { patient->weight = value; }}};
+				 { patient->weight = value; }},
+				{"admissions", [&patient](const std::string &value)
+				 {
+					 try
+					 {
+						 Admissions::Department dept = Admissions::stringToDepartment(value);
+						 std::string dateTime = formatTimestamp(std::chrono::system_clock::now());
+						 patient->admissions[dept].push_back(dateTime);
+					 }
+					 catch (const std::exception &e)
+					 {
+						 std::cerr << "Invalid department name for admissions: " << value << "\n";
+					 }
+				 }}};
 
 			auto it = patientUpdates.find(fieldName);
 			if (it != patientUpdates.end())

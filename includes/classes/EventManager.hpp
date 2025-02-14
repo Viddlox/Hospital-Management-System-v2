@@ -18,6 +18,7 @@ private:
     Dashboard dash;
     Database db;
     Profile p;
+    Admission a;
     bool isRunning = false;
 
     EventManager() : screen(Screen::Login) {}
@@ -63,6 +64,14 @@ private:
         case Screen::Profile:
             curs_set(0);
             renderProfileScreen(p);
+            wrefresh(stdscr);
+            break;
+        case Screen::ProfileAdmissions:
+            renderProfileAdmissionsScreen(p);
+            wrefresh(stdscr);
+            break;
+        case Screen::Admission:
+            renderAdmissionScreen(a);
             wrefresh(stdscr);
             break;
         default:
@@ -113,12 +122,16 @@ public:
         if (userManager.getAdminCount() < 1)
         {
             for (int i = 1; i < 31; i++)
-                userManager.createAdmin("admin" + std::to_string(i), "1234", "Michael Cheng" + std::to_string(i), "nigga@gmail.com", "0123917125");
+                userManager.createAdmin("admin" + std::to_string(i), "1234",
+                                        "Michael Cheng" + std::to_string(i), "nigga@gmail.com", "0123917125");
         }
         if (userManager.getPatientCount() < 1)
         {
             for (int i = 1; i < 31; i++)
-                userManager.createPatient("user" + std::to_string(i), "123", 42, "Peter Griffin" + std::to_string(i), "Christianity", "Malaysian", "010403141107", "single", "male", "Chinese", "mikeypeter37@gmail.com", "0123917125", "0123197125", "Lois Griffin", "Quahog", 20, "180", "70");
+                userManager.createPatient("user" + std::to_string(i), "123", 42,
+                                          "Peter Griffin" + std::to_string(i), "Christianity", "Malaysian", "010403141107",
+                                          "single", "male", "Chinese", "mikeypeter37@gmail.com", "0123917125", "0123197125",
+                                          "Lois Griffin", "Quahog", 20, "180", "70", Admissions::Department::Surgery);
         }
         try
         {

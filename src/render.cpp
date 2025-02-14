@@ -30,6 +30,7 @@ void renderHeader()
     WINDOW *header_win = newwin(10, 82, row, col);
     box(header_win, 0, 0);
 
+    wattron(header_win, A_BOLD);
     mvwprintw(header_win, 1, 1, "  /$$      /$$                 /$$ /$$$$$$$$           /$$                      ");
     mvwprintw(header_win, 2, 1, " | $$$    /$$$                | $$|__  $$__/          | $$               /$$    ");
     mvwprintw(header_win, 3, 1, " | $$$$  /$$$$  /$$$$$$   /$$$$$$$   | $$     /$$$$$$ | $$   /$$        | $$    ");
@@ -38,6 +39,7 @@ void renderHeader()
     mvwprintw(header_win, 6, 1, " | $$\\  $ | $$| $$_____/| $$  | $$   | $$   | $$_____/| $$_  $$         | $$   ");
     mvwprintw(header_win, 7, 1, " | $$ \\/  | $$|  $$$$$$$|  $$$$$$$   | $$   |  $$$$$$$| $$ \\  $$        |__/  ");
     mvwprintw(header_win, 8, 1, " |__/     |__/ \\_______/ \\_______/   |__/    \\_______/|__/  \\__/            ");
+    wattroff(header_win, A_BOLD);
 
     refresh();
     wbkgd(header_win, COLOR_PAIR(colorScheme.primary));
@@ -150,8 +152,10 @@ void renderLoginScreen()
 
     wbkgd(win_body, COLOR_PAIR(colorScheme.primary));
     box(win_body, 0, 0);
+    wattron(win_body, A_BOLD);
     std::string loginForm = "Login";
     mvwprintw(win_body, 1, (50 - loginForm.length()) / 2, "%s", loginForm.c_str());
+    wattroff(win_body, A_BOLD);
 
     // Create a subwindow inside the main window for the form
     WINDOW *win_form = derwin(win_body, 8, 48, 3, 1);
@@ -273,34 +277,56 @@ void renderLoginScreen()
 void renderControlInfo()
 {
     Color colorScheme;
+    Controls controls;
 
-    std::string header = "Main Controls";
-    std::string back = "1) Ctrl+b (back)";
-    std::string exit = "2) Esc/Ctrl+c (exit)";
-    std::string enter = "3) Enter (proceed)";
-    std::string navigate = "4) Arrow keys (navigate)";
+    int outer_width = 38;                              // Increased width for better readability
+    int outer_height = 8 + controls.controlArr.size(); // Dynamic height
 
-    int outer_width = 28;
-    int outer_height = 11;
+    int inner_width = outer_width - 4;
+    int inner_height = outer_height - 4;
 
-    int inner_width = 26;
-    int inner_height = 7;
+    int start_y = 0; // Positioning
+    int start_x = 2;
 
-    WINDOW *win_outer = newwin(outer_height, outer_width, 0, 1);
+    // Create outer window (bordered box)
+    WINDOW *win_outer = newwin(outer_height, outer_width, start_y, start_x);
     wbkgd(win_outer, COLOR_PAIR(colorScheme.primary));
     box(win_outer, 0, 0);
-    mvwprintw(win_outer, 1, (outer_width - header.length()) / 2, "%s", header.c_str());
+
+    // Print header
+    wattron(win_outer, A_BOLD);
+    mvwprintw(win_outer, 1, (outer_width - controls.header.length()) / 2, "%s", controls.header.c_str());
+    wattroff(win_outer, A_BOLD);
     wrefresh(win_outer);
 
-    WINDOW *win_inner = derwin(win_outer, inner_height, inner_width, 2, 1);
+    // Create inner window (for control descriptions)
+    WINDOW *win_inner = derwin(win_outer, inner_height, inner_width, 2, 2);
     wbkgd(win_inner, COLOR_PAIR(colorScheme.primary));
     box(win_inner, 0, 0);
-    mvwprintw(win_inner, 1, 1, "%s", back.c_str());
-    mvwprintw(win_inner, 2, 1, "%s", exit.c_str());
-    mvwprintw(win_inner, 3, 1, "%s", enter.c_str());
-    mvwprintw(win_inner, 4, 1, "%s", navigate.c_str());
+
+    // Render controls
+    int row = 1;
+    for (const auto &control : controls.controlArr)
+    {
+        if (control.find('|') != std::string::npos) // If it's a section title
+        {
+            wattron(win_inner, A_BOLD | A_UNDERLINE);
+            mvwprintw(win_inner, row, (inner_width - control.length()) / 2, "%s", control.c_str());
+            wattroff(win_inner, A_BOLD | A_UNDERLINE);
+        }
+        else
+        {
+            mvwprintw(win_inner, row, 2, "%s", control.c_str());
+        }
+        row++;
+    }
+
     wrefresh(win_inner);
 
+    // Wait before closing to avoid flickering (optional)
+    napms(100);
+
+    // Cleanup
     delwin(win_inner);
     delwin(win_outer);
 }
@@ -797,7 +823,7 @@ bool submitRegistrationPatient(RegistrationPatient &reg)
         userManager.createPatient(reg.username, reg.password, calculateAge(reg.identityCardNumber), reg.fullName,
                                   reg.religion, reg.nationality, reg.identityCardNumber, reg.maritalStatus,
                                   reg.gender, reg.race, reg.email, reg.contactNumber, reg.emergencyContactNumber,
-                                  reg.emergencyContactName, reg.address, calculateBMI(reg.weight, reg.height), reg.height, reg.weight);
+                                  reg.emergencyContactName, reg.address, calculateBMI(reg.weight, reg.height), reg.height, reg.weight, Admissions::Department::Surgery);
         return true;
     }
     catch (const std::exception &e)
@@ -1168,7 +1194,7 @@ void handleDashboardOptions(Dashboard &dash, Profile &p)
         eventManager.switchScreen(Screen::Database);
         dash.reset();
         break;
-    case 1: 
+    case 1:
         p.prevScreen = Screen::Dashboard;
         p.user = userManager.getCurrentUser();
         eventManager.switchScreen(Screen::Profile);
@@ -1212,7 +1238,9 @@ void renderDashboardScreen(Dashboard &dash, Profile &p)
 
     // Draw the subheader on win_body
     std::string subHeader = "Main Menu";
+    wattron(win_body, A_BOLD);
     mvwprintw(win_body, 1, (outer_width - subHeader.length()) / 2, "%s", subHeader.c_str());
+    wattroff(win_body, A_BOLD);
     wrefresh(win_body); // Refresh win_body to show the subheader
 
     int inner_height = outer_height - 4;
@@ -1302,38 +1330,6 @@ void renderDashboardScreen(Dashboard &dash, Profile &p)
     handleDashboardOptions(dash, p);
 }
 
-void renderDatabaseControlInfo(Database &db, Color &colorScheme)
-{
-    std::string header = "Database Controls";
-    int outer_width = 28;
-    int outer_height = 10;
-
-    int inner_width = 26;
-    int inner_height = 7;
-
-    WINDOW *win_outer = newwin(outer_height, outer_width, 12, 1);
-    wbkgd(win_outer, COLOR_PAIR(colorScheme.primary));
-    box(win_outer, 0, 0);
-    mvwprintw(win_outer, 1, (outer_width - header.length()) / 2, "%s", header.c_str());
-    wrefresh(win_outer);
-
-    WINDOW *win_inner = derwin(win_outer, inner_height, inner_width, 2, 1);
-    wbkgd(win_inner, COLOR_PAIR(colorScheme.primary));
-    box(win_inner, 0, 0);
-
-    int y_offset = 1;
-
-    const auto &controls = db.controlInfoArr;
-
-    for (const auto &control : controls)
-    {
-        mvwprintw(win_inner, y_offset++, 1, "%s", control.c_str());
-    }
-
-    wrefresh(win_inner);
-    delwin(win_outer);
-}
-
 void handleDatabaseControls(Database &db, UserManager &userManager, EventManager &eventManager, WINDOW *win_form, WINDOW *win_body, Profile &p)
 {
     if (db.listMatrixCurrent.empty())
@@ -1392,7 +1388,6 @@ void renderDatabaseScreen(Database &db, Profile &p)
 
     renderHeader();
     renderControlInfo();
-    renderDatabaseControlInfo(db, colorScheme);
 
     bkgd(COLOR_PAIR(colorScheme.primary));
 
@@ -1617,24 +1612,201 @@ void backHandlerRegistrationProfile(WINDOW *win_form, WINDOW *win_body, Profile 
     p.reset();
 }
 
-void renderProfileScreen(Profile &p)
+void renderProfileAdmissionsScreen(Profile &p)
 {
     Color colorScheme;
-    bkgd(COLOR_PAIR(colorScheme.primary));
-    int ch;
+    EventManager &eventManager = EventManager::getInstance();
 
     renderHeader();
     renderControlInfo();
 
+    auto patient = std::dynamic_pointer_cast<Patient>(p.user);
+
+    p.currentPage = 0;
+    p.searchQuery.clear();
+    p.generateListMatrix(patient->admissions);
+    p.listMatrix = p.getCurrentPage();
+
+    std::string header = "Viewing " + patient->fullName + "'s admissions";
+    attron(A_BOLD);
+    mvprintw(11, (COLS - header.length()) / 2, "%s", header.c_str());
+    attroff(A_BOLD);
+    refresh();
+
+    int outer_height = 28;
+    int outer_width = 82;
+
+    int start_y = ((LINES - outer_height) / 2) + 5;
+    int start_x = (COLS - outer_width) / 2;
+
+    WINDOW *win_body = newwin(outer_height, outer_width, start_y, start_x);
+    wbkgd(win_body, COLOR_PAIR(colorScheme.primary));
+    box(win_body, 0, 0);
+    wrefresh(win_body);
+
+    int inner_height = outer_height - 4;
+    int inner_width = outer_width - 4;
+
+    WINDOW *win_form = derwin(win_body, inner_height, inner_width, 2, 2);
+    wbkgd(win_form, COLOR_PAIR(colorScheme.primary));
+    box(win_form, 0, 0);
+    wrefresh(win_form);
+
+    bool done = false;
+
+    keypad(win_form, TRUE);
+    curs_set(0);
+
+    while (!done)
+    {
+        // Render subheader (Patient Records / Admin Records)
+        werase(win_body);
+        box(win_body, 0, 0);
+        std::string subHeader = p.patientSubheaderArr[1];
+        mvwprintw(win_body, 1, (outer_width - subHeader.length()) / 2, "%s", subHeader.c_str());
+        wrefresh(win_body);
+
+        werase(win_form);
+        box(win_form, 0, 0);
+
+        mvwhline(win_form, 2, 2, ACS_HLINE, inner_width - 4);
+
+        // Render the search bar
+        std::string searchText = "Search: " + p.searchQuery;
+        mvwprintw(win_form, 1, 2, "%s", searchText.c_str());
+
+        // Render the list matrix for the current page
+        if (p.listMatrix.empty())
+        {
+            std::string emptyText = "No records found.";
+            mvwprintw(win_form, 4, (inner_width - emptyText.length()) / 2, "%s", emptyText.c_str());
+        }
+        else
+        {
+            for (int i = 0; i < static_cast<int>(p.listMatrix.size()); i++)
+            {
+                int xPos = 2;
+                int yPos = 3 + (i * 2);
+
+                for (int j = 0; j < static_cast<int>(p.listMatrix[i].size()); j++)
+                {
+                    if (j == 2)
+                    {
+                        xPos += 5;
+                    }
+                    // Highlight selected item
+                    if (i == p.selectedRow && j == p.selectedCol)
+                        wattron(win_form, A_REVERSE);
+
+                    mvwprintw(win_form, yPos, xPos, "%s", p.listMatrix[i][j].c_str());
+
+                    if (i == p.selectedRow && j == p.selectedCol)
+                        wattroff(win_form, A_REVERSE);
+
+                    xPos += inner_width / p.listMatrix[i].size();
+                }
+            }
+        }
+
+        // Position the cursor in the search bar if selected
+        if (p.selectedRow == -1)
+        {
+            curs_set(1);                                 // Show cursor
+            wmove(win_form, 1, 2 + searchText.length()); // Move cursor to end of search text
+        }
+        else
+        {
+            curs_set(0); // Hide cursor
+        }
+
+        wrefresh(win_form);
+
+        int ch = wgetch(win_form);
+
+        if (p.selectedRow == -1)
+        {
+            if (ch == KEY_BACKSPACE || ch == 127) // Handle backspace
+            {
+                if (!p.searchQuery.empty())
+                    p.searchQuery.pop_back();
+            }
+            else if (ch >= 32 && ch <= 126) // Allow printable characters
+            {
+                p.currentPage = 0;
+                p.searchQuery += static_cast<char>(ch);
+            }
+            // Regenerate list dynamically
+            p.generateListMatrix(patient->admissions);
+            p.listMatrix = p.getCurrentPage();
+        }
+
+        // Handle input (Navigation, Tab Switching, etc.)
+
+        switch (ch)
+        {
+        case '\n':
+            break;
+        case KEY_DOWN:
+            if (p.selectedRow < static_cast<int>(p.listMatrix.size() - 1))
+                p.selectedRow++;
+            break;
+        case KEY_UP:
+            if (p.selectedRow > -1)
+                p.selectedRow--;
+            break;
+        case 9:
+            done = true;
+            break;
+        case KEY_PPAGE: // Page Up
+            if (p.currentPage > 0)
+            {
+                p.currentPage--;
+                p.listMatrix = p.getCurrentPage();
+            }
+            break;
+        case KEY_NPAGE: // Page Down
+            if (p.currentPage + 1 < p.totalPages)
+            {
+                p.currentPage++;
+                p.listMatrix = p.getCurrentPage();
+            }
+            break;
+        case 27: // ESC to exit
+            exitHandler();
+            done = true;
+            break;
+        case 2: // Custom key for "Back"
+            done = true;
+            break;
+        }
+    }
+    wclear(win_form);
+    wclear(win_body);
+    delwin(win_form);
+    delwin(win_body);
+    p.reset();
+    eventManager.switchScreen(Screen::Profile);
+}
+
+void renderProfileScreen(Profile &p)
+{
+    Color colorScheme;
+    EventManager &eventManager = EventManager::getInstance();
+
+    renderHeader();
+    renderControlInfo();
+
+    bkgd(COLOR_PAIR(colorScheme.primary));
+    int ch;
+
     if (p.user->getRole() == Role::Patient)
     {
         auto patient = std::dynamic_pointer_cast<Patient>(p.user);
-
         int baseline = 11;
+        attron(A_BOLD);
         std::string header = "Viewing " + patient->fullName + "'s account";
         mvprintw(baseline, (COLS - header.length()) / 2, "%s", header.c_str());
-
-        bkgd(COLOR_PAIR(colorScheme.primary));
+        attroff(A_BOLD);
 
         int outer_height = 26;
         int outer_width = 60;
@@ -1645,8 +1817,7 @@ void renderProfileScreen(Profile &p)
         wbkgd(win_body, COLOR_PAIR(colorScheme.primary));
         box(win_body, 0, 0);
 
-        std::string subHeader = "Account Information";
-        mvwprintw(win_body, 1, (outer_width - subHeader.length()) / 2, "%s", subHeader.c_str());
+        mvwprintw(win_body, 1, (outer_width - p.patientSubheaderArr[0].length()) / 2, "%s", p.patientSubheaderArr[0].c_str());
 
         int inner_height = outer_height - 4;
         int inner_width = outer_width - 4;
@@ -1655,7 +1826,7 @@ void renderProfileScreen(Profile &p)
         wbkgd(win_form, COLOR_PAIR(colorScheme.primary));
         box(win_form, 0, 0);
 
-        std::vector<std::pair<std::string, std::string>> fieldValues = {
+        p.fieldValues = {
             {"ID: ", patient->getId()},
             {"Created at: ", patient->getCreatedAt()},
             {"Full Name: ", patient->getFullName()},
@@ -1675,10 +1846,11 @@ void renderProfileScreen(Profile &p)
             {"BMI: ", std::to_string(patient->bmi)},
             {"Height: ", patient->height},
             {"Weight: ", patient->weight},
-            {"Address: ", patient->address}};
+            {"Address: ", patient->address},
+        };
 
         int row = 1;
-        for (const auto &field : fieldValues)
+        for (const auto &field : p.fieldValues)
         {
             mvwprintw(win_form, row, 2, "%s%s", field.first.c_str(), field.second.c_str());
             row++;
@@ -1690,18 +1862,23 @@ void renderProfileScreen(Profile &p)
         while (true)
         {
             ch = getch();
-            if (ch == 2)
+            switch (ch)
             {
+            case 2:
                 backHandlerRegistrationProfile(win_form, win_body, p);
-                break;
-            }
-            else if (ch == 27)
-            {
+                return;
+            case 27:
                 exitHandler();
-            }
-            else
-            {
-                continue;
+                return;
+            case 9:
+                wclear(win_form);
+                wclear(win_body);
+                wrefresh(win_form);
+                wrefresh(win_body);
+                delwin(win_form);
+                delwin(win_body);
+                eventManager.switchScreen(Screen::ProfileAdmissions);
+                return;
             }
         }
     }
@@ -1734,7 +1911,7 @@ void renderProfileScreen(Profile &p)
         wbkgd(win_form, COLOR_PAIR(colorScheme.primary));
         box(win_form, 0, 0);
 
-        std::vector<std::pair<std::string, std::string>> fieldValues = {
+        p.fieldValues = {
             {"ID: ", admin->getId()},
             {"Created at: ", admin->getCreatedAt()},
             {"Full Name: ", admin->getFullName()},
@@ -1744,7 +1921,7 @@ void renderProfileScreen(Profile &p)
             {"Contact No.: ", admin->contactNumber}};
 
         int row = 1;
-        for (const auto &field : fieldValues)
+        for (const auto &field : p.fieldValues)
         {
             mvwprintw(win_form, row, 2, "%s%s", field.first.c_str(), field.second.c_str());
             row++;
@@ -1771,4 +1948,170 @@ void renderProfileScreen(Profile &p)
             }
         }
     }
+}
+
+void renderAdmissionScreen(Admission &a)
+{
+    Color colorScheme;
+    EventManager &eventManager = EventManager::getInstance();
+
+    renderHeader();
+    renderControlInfo();
+
+    a.currentPage = 0;
+    a.searchQuery.clear();
+    a.list = a.getCurrentPage();
+
+    std::string header = "Admission";
+    attron(A_BOLD);
+    mvprintw(11, (COLS - header.length()) / 2, "%s", header.c_str());
+    attroff(A_BOLD);
+    refresh();
+
+    int outer_height = 28;
+    int outer_width = 82;
+
+    int start_y = ((LINES - outer_height) / 2) + 5;
+    int start_x = (COLS - outer_width) / 2;
+
+    WINDOW *win_body = newwin(outer_height, outer_width, start_y, start_x);
+    wbkgd(win_body, COLOR_PAIR(colorScheme.primary));
+    box(win_body, 0, 0);
+    wrefresh(win_body);
+
+    int inner_height = outer_height - 4;
+    int inner_width = outer_width - 4;
+
+    WINDOW *win_form = derwin(win_body, inner_height, inner_width, 2, 2);
+    wbkgd(win_form, COLOR_PAIR(colorScheme.primary));
+    box(win_form, 0, 0);
+    wrefresh(win_form);
+
+    bool done = false;
+
+    keypad(win_form, TRUE);
+    curs_set(0);
+
+    while (!done)
+    {
+        // Render subheader (Patient Records / Admin Records)
+        werase(win_body);
+        box(win_body, 0, 0);
+        std::string subHeader = "Select a department";
+        mvwprintw(win_body, 1, (outer_width - subHeader.length()) / 2, "%s", subHeader.c_str());
+        wrefresh(win_body);
+
+        werase(win_form);
+        box(win_form, 0, 0);
+
+        mvwhline(win_form, 2, 2, ACS_HLINE, inner_width - 4);
+
+        // Render the search bar
+        std::string searchText = "Search: " + a.searchQuery;
+        mvwprintw(win_form, 1, 2, "%s", searchText.c_str());
+
+        // Render the list matrix for the current page
+        if (a.list.empty())
+        {
+            std::string emptyText = "No records found.";
+            mvwprintw(win_form, 4, (inner_width - emptyText.length()) / 2, "%s", emptyText.c_str());
+        }
+        else
+        {
+            for (int i = 0; i < static_cast<int>(a.list.size()); i++)
+            {
+                int yPos = 3 + (i * 2);
+                int xPos = 2;
+
+                if (i == a.selectedRow)
+                    wattron(win_form, A_REVERSE);
+
+                mvwprintw(win_form, yPos, xPos, "%s", a.list[i].second.c_str());
+
+                if (i == a.selectedRow)
+                    wattroff(win_form, A_REVERSE);
+            }
+        }
+        if (a.selectedRow == -1)
+        {
+            curs_set(1);                                 // Show cursor
+            wmove(win_form, 1, 2 + searchText.length()); // Move cursor to end of search text
+        }
+        else
+        {
+            curs_set(0); // Hide cursor
+        }
+
+        wrefresh(win_form);
+
+        int ch = wgetch(win_form);
+
+        if (a.selectedRow == -1)
+        {
+            if (ch == KEY_BACKSPACE || ch == 127) // Handle backspace
+            {
+                if (!a.searchQuery.empty())
+                    a.searchQuery.pop_back();
+            }
+            else if (ch >= 32 && ch <= 126) // Allow printable characters
+            {
+                a.currentPage = 0;
+                a.searchQuery += static_cast<char>(ch);
+            }
+            // Regenerate list dynamically
+            a.generateList(a.search(a.searchQuery));
+            a.list = a.getCurrentPage();
+        }
+
+        // Handle input (Navigation, Tab Switching, etc.)
+
+        switch (ch)
+        {
+        case '\n':
+            if (a.selectedRow > -1 && a.selectedRow < static_cast<int>(a.list.size() - 1))
+            {
+                a.selectedDepartment = a.list[a.selectedRow].first;
+                done = true;
+            }
+            break;
+        case KEY_DOWN:
+            if (a.selectedRow < static_cast<int>(a.list.size() - 1))
+                a.selectedRow++;
+            break;
+        case KEY_UP:
+            if (a.selectedRow > -1)
+                a.selectedRow--;
+            break;
+        case 9:
+            done = true;
+            break;
+        case KEY_PPAGE: // Page Up
+            if (a.currentPage > 0)
+            {
+                a.currentPage--;
+                a.list = a.getCurrentPage();
+            }
+            break;
+        case KEY_NPAGE: // Page Down
+            if (a.currentPage + 1 < a.totalPages)
+            {
+                a.currentPage++;
+                a.list = a.getCurrentPage();
+            }
+            break;
+        case 27: // ESC to exit
+            exitHandler();
+            done = true;
+            break;
+        case 2: // Custom key for "Back"
+            done = true;
+            break;
+        }
+    }
+    wclear(win_form);
+    wclear(win_body);
+    delwin(win_form);
+    delwin(win_body);
+    a.reset();
+    eventManager.switchScreen(a.prevScreen);
 }

@@ -2,9 +2,10 @@
 #define PATIENT_H
 
 #include <unordered_map>
-
+#include <map>
 #include "Utils.hpp"
 #include "User.hpp"
+#include "Admissions.hpp"
 
 class Patient : public User
 {
@@ -28,12 +29,12 @@ public:
     std::string height;
     std::string weight;
 
+    // Admissions log (department -> list of admission dates)
+    std::map<Admissions::Department, std::vector<std::string>> admissions;
+
     // Default constructor
     Patient()
-        : User(),
-          age(0), religion(""), nationality(""),
-          identityCardNumber(""), maritalStatus(""), gender(""), race(""), emergencyContactNumber(""), emergencyContactName(""),
-          address(""), bmi(0), height(""), weight("") {}
+        : User(), age(0), bmi(0) {}
 
     // Parameterized constructor
     Patient(
@@ -41,18 +42,26 @@ public:
         const std::string &religion, const std::string &nationality, const std::string &identityCardNumber,
         const std::string &maritalStatus, const std::string &gender, const std::string &race, const std::string &email,
         const std::string &contactNumber, const std::string &emergencyContactNumber, const std::string &emergencyContactName,
-        const std::string &address, double bmi, const std::string &height, const std::string &weight)
-        : User(username, password, fullName, email, contactNumber, Role::Patient), // Call base class constructor
+        const std::string &address, double bmi, const std::string &height, const std::string &weight, Admissions::Department dept)
+        : User(username, password, fullName, email, contactNumber, Role::Patient),
           age(age), religion(religion), nationality(nationality),
           identityCardNumber(identityCardNumber), maritalStatus(maritalStatus), gender(gender), race(race),
           emergencyContactNumber(emergencyContactNumber), emergencyContactName(emergencyContactName),
           address(address), bmi(bmi), height(height), weight(weight)
     {
+        addAdmission(dept);
     }
 
     ~Patient() = default;
 
-    // Friend functions to handle JSON serialization/deserialization as JSON is an external class
+    // 🔹 Add an admission record
+    void addAdmission(Admissions::Department dept)
+    {
+        std::string dateTime = formatTimestamp(std::chrono::system_clock::now());
+        admissions[dept].push_back(dateTime);
+    }
+
+    // 🔹 Friend functions for JSON serialization/deserialization
     friend void to_json(json &j, const Patient &p)
     {
         j = json{
@@ -77,7 +86,13 @@ public:
             {"bmi", p.bmi},
             {"height", p.height},
             {"weight", p.weight},
+            {"admissions", json::object()} // Initialize an empty JSON object
         };
+
+        for (const auto &[dept, dates] : p.admissions)
+        {
+            j["admissions"][Admissions::departmentToString(dept)] = dates;
+        }
     }
 
     friend void from_json(const json &j, Patient &p)
@@ -103,38 +118,44 @@ public:
         p.height = j.at("height").get<std::string>();
         p.weight = j.at("weight").get<std::string>();
 
-        // Deserialize createdAt as a string and convert it to time_point
+        // Deserialize admissions map
+        if (j.contains("admissions"))
+        {
+            for (const auto &[deptStr, dateList] : j["admissions"].items())
+            {
+                Admissions::Department dept = Admissions::stringToDepartment(deptStr);
+                p.admissions[dept] = dateList.get<std::vector<std::string>>();
+            }
+        }
+
+        // Deserialize createdAt
         std::string createdAtStr = j.at("createdAt").get<std::string>();
         std::tm tm = {};
         std::istringstream ss(createdAtStr);
-        ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S"); // Match the format of your timestamp
+        ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
 
-        // If parsing is successful, convert tm to time_point
         if (ss.fail())
         {
             throw std::invalid_argument("Invalid date format for createdAt");
         }
 
-        // Convert the std::tm to system_clock::time_point
         std::time_t time = std::mktime(&tm);
         p.createdAt = std::chrono::system_clock::from_time_t(time);
     }
+
+    // 🔹 Save to JSON file
     void saveToFile() const
     {
-        // Ensure the folder exists
         std::filesystem::create_directories("db/patient");
 
-        // Generate the file name using the patient ID
         std::string filePath = "db/patient/" + id + ".json";
 
-        // Serialize the object to JSON
         json j = *this;
 
-        // Write to the file
         std::ofstream file(filePath);
         if (file.is_open())
         {
-            file << j.dump(4); // Pretty print with 4 spaces
+            file << j.dump(4);
             file.close();
         }
         else
