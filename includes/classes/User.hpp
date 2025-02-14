@@ -24,9 +24,9 @@ class User
 {
 protected:
     std::string id;
-    std::chrono::system_clock::time_point createdAt;
 
 public:
+    std::chrono::system_clock::time_point createdAt;
     std::string username;
     std::string password;
     std::string fullName;

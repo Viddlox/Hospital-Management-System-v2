@@ -507,7 +507,7 @@ public:
 	}
 	std::vector<std::pair<std::string, std::string>> getAdmins(const std::string &query)
 	{
-		std::vector<std::pair<std::string, std::string>> res;
+		std::vector<std::pair<std::shared_ptr<User>, std::string>> tempRes;
 		std::string filteredQuery = query.empty() ? "" : toLower(trim(query));
 
 		for (const auto &pair : userMap)
@@ -519,18 +519,27 @@ public:
 					toLower(userPtr->getFullName()).find(filteredQuery) != std::string::npos ||
 					toLower(userPtr->getId()).find(filteredQuery) != std::string::npos ||
 					toLower(userPtr->getUsername()).find(filteredQuery) != std::string::npos)
-
 				{
-					res.push_back({userPtr->getFullName(), userPtr->getId()});
+					tempRes.push_back({userPtr, userPtr->getId()});
 				}
 			}
+		}
+
+		// Sort by createdAt in descending order (newest first)
+		std::sort(tempRes.begin(), tempRes.end(), [](const auto &a, const auto &b)
+				  { return a.first->createdAt > b.first->createdAt; });
+
+		std::vector<std::pair<std::string, std::string>> res;
+		for (const auto &entry : tempRes)
+		{
+			res.push_back({entry.first->getFullName(), entry.second});
 		}
 		return res;
 	}
 
 	std::vector<std::pair<std::string, std::string>> getPatients(const std::string &query)
 	{
-		std::vector<std::pair<std::string, std::string>> res;
+		std::vector<std::pair<std::shared_ptr<User>, std::string>> tempRes;
 		std::string filteredQuery = query.empty() ? "" : toLower(trim(query));
 
 		for (const auto &pair : userMap)
@@ -543,9 +552,19 @@ public:
 					toLower(userPtr->getId()).find(filteredQuery) != std::string::npos ||
 					toLower(userPtr->getUsername()).find(filteredQuery) != std::string::npos)
 				{
-					res.push_back({userPtr->getFullName(), userPtr->getId()});
+					tempRes.push_back({userPtr, userPtr->getId()});
 				}
 			}
+		}
+
+		// Sort by createdAt in descending order (newest first)
+		std::sort(tempRes.begin(), tempRes.end(), [](const auto &a, const auto &b)
+				  { return a.first->createdAt > b.first->createdAt; });
+
+		std::vector<std::pair<std::string, std::string>> res;
+		for (const auto &entry : tempRes)
+		{
+			res.push_back({entry.first->getFullName(), entry.second});
 		}
 		return res;
 	}

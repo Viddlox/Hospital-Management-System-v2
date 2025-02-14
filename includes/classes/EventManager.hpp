@@ -13,9 +13,11 @@ class EventManager
 private:
     Screen screen;
     UserManager &userManager = UserManager::getInstance();
-    Registration reg;
+    RegistrationPatient reg;
+    RegistrationAdmin regA;
     Dashboard dash;
     Database db;
+    Profile p;
     bool isRunning = false;
 
     EventManager() : screen(Screen::Login) {}
@@ -41,7 +43,7 @@ private:
             curs_set(0);
             renderHeader();
             renderControlInfo();
-            renderDashboardScreen(dash);
+            renderDashboardScreen(dash, p);
             wrefresh(stdscr);
             break;
         case Screen::RegisterPatient:
@@ -49,11 +51,19 @@ private:
             renderRegistrationScreenPatient(reg);
             wrefresh(stdscr);
             break;
+        case Screen::RegisterAdmin:
+            curs_set(1);
+            renderRegistrationScreenAdmin(regA);
+            wrefresh(stdscr);
+            break;
         case Screen::Database:
-            renderDatabaseScreen(db);
+            renderDatabaseScreen(db, p);
             wrefresh(stdscr);
             break;
         case Screen::Profile:
+            curs_set(0);
+            renderProfileScreen(p);
+            wrefresh(stdscr);
             break;
         default:
             break;

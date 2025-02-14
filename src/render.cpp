@@ -310,10 +310,10 @@ void exitHandler()
     EventManager &eventManager = EventManager::getInstance();
     eventManager.exit();
 }
-void backHandlerRegistration(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body, Registration &reg, Color &colorScheme)
+void backHandlerRegistrationPatient(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body, RegistrationPatient &reg, Color &colorScheme)
 {
     EventManager &eventManager = EventManager::getInstance();
-    Registration::Section section = reg.currentSection;
+    RegistrationPatient::Section section = reg.currentSection;
 
     if (form)
     {
@@ -336,13 +336,13 @@ void backHandlerRegistration(FORM *form, FIELD **fields, WINDOW *win_form, WINDO
 
     switch (section)
     {
-    case Registration::Section::selection:
+    case RegistrationPatient::Section::selection:
         renderRegistrationPersonalSectionPatient(reg, colorScheme);
         break;
-    case Registration::Section::personal:
+    case RegistrationPatient::Section::personal:
         renderRegistrationAccountSectionPatient(reg, colorScheme);
         break;
-    case Registration::Section::account:
+    case RegistrationPatient::Section::account:
         reg.reset();
         eventManager.switchScreen(Screen::Database);
         break;
@@ -413,7 +413,7 @@ bool validateFields(FIELD **fields, Color &colorScheme)
     return true;
 }
 
-void renderRegistrationAccountSectionPatient(Registration &reg, Color &colorScheme)
+void renderRegistrationAccountSectionPatient(RegistrationPatient &reg, Color &colorScheme)
 {
     renderHeader();
     renderControlInfo();
@@ -422,7 +422,7 @@ void renderRegistrationAccountSectionPatient(Registration &reg, Color &colorSche
     std::string header = "Register a MedTek+ Patient Account";
     mvprintw(baseline, (COLS - header.length()) / 2, "%s", header.c_str());
 
-    reg.currentSection = Registration::Section::account;
+    reg.currentSection = RegistrationPatient::Section::account;
     bkgd(COLOR_PAIR(colorScheme.primary));
 
     int outer_height = 16;
@@ -523,7 +523,7 @@ void renderRegistrationAccountSectionPatient(Registration &reg, Color &colorSche
                 [&]()
                 { exitHandler(); },
                 [&]()
-                { backHandlerRegistration(form, fields, win_form, win_body, reg, colorScheme); });
+                { backHandlerRegistrationPatient(form, fields, win_form, win_body, reg, colorScheme); });
         }
         form_driver(form, REQ_VALIDATION);
         if (!validateFields(fields, colorScheme))
@@ -567,7 +567,7 @@ void renderRegistrationAccountSectionPatient(Registration &reg, Color &colorSche
     renderRegistrationPersonalSectionPatient(reg, colorScheme);
 }
 
-void renderRegistrationPersonalSectionPatient(Registration &reg, Color &colorScheme)
+void renderRegistrationPersonalSectionPatient(RegistrationPatient &reg, Color &colorScheme)
 {
     renderHeader();
     renderControlInfo();
@@ -576,7 +576,7 @@ void renderRegistrationPersonalSectionPatient(Registration &reg, Color &colorSch
     std::string header = "Register a MedTek+ Patient Account";
     mvprintw(baseline, (COLS - header.length()) / 2, "%s", header.c_str());
 
-    reg.currentSection = Registration::Section::personal;
+    reg.currentSection = RegistrationPatient::Section::personal;
     bkgd(COLOR_PAIR(colorScheme.primary));
 
     int outer_height = 20;
@@ -681,7 +681,7 @@ void renderRegistrationPersonalSectionPatient(Registration &reg, Color &colorSch
                 [&]()
                 { exitHandler(); },
                 [&]()
-                { backHandlerRegistration(form, fields, win_form, win_body, reg, colorScheme); });
+                { backHandlerRegistrationPatient(form, fields, win_form, win_body, reg, colorScheme); });
         }
         form_driver(form, REQ_VALIDATION);
         if (!validateFields(fields, colorScheme))
@@ -789,7 +789,7 @@ double calculateBMI(const std::string &weight, const std::string &height)
     return std::stod(weight) / pow((std::stod(height) / 100.0), 2);
 }
 
-bool submitRegistration(Registration &reg, Color &colorScheme)
+bool submitRegistrationPatient(RegistrationPatient &reg)
 {
     try
     {
@@ -802,17 +802,16 @@ bool submitRegistration(Registration &reg, Color &colorScheme)
     }
     catch (const std::exception &e)
     {
-        std::cerr << "Error registering new patient" << e.what() << std::endl;
         return false;
     }
     return false;
 }
 
-void renderRegistrationSelectionSectionPatient(Registration &reg, Color &colorScheme)
+void renderRegistrationSelectionSectionPatient(RegistrationPatient &reg, Color &colorScheme)
 {
     renderHeader();
     renderControlInfo();
-    reg.currentSection = Registration::Section::selection;
+    reg.currentSection = RegistrationPatient::Section::selection;
 
     bkgd(COLOR_PAIR(colorScheme.primary));
 
@@ -848,7 +847,7 @@ void renderRegistrationSelectionSectionPatient(Registration &reg, Color &colorSc
 
     // Create a dedicated status window
     int status_win_height = 5;
-    int status_win_width = 33;
+    int status_win_width = 34;
     int status_win_y = LINES - 6;
     int status_win_x = (COLS - status_win_width) / 2;
 
@@ -915,12 +914,229 @@ void renderRegistrationSelectionSectionPatient(Registration &reg, Color &colorSc
             done = true;
             break;
         case 2: // Custom key for "Back"
-            backHandlerRegistration(nullptr, nullptr, win_form, win_body, reg, colorScheme);
+            backHandlerRegistrationPatient(nullptr, nullptr, win_form, win_body, reg, colorScheme);
             break;
         }
     }
 
-    if (submitRegistration(reg, colorScheme))
+    if (submitRegistrationPatient(reg))
+    {
+        wbkgd(status_win, COLOR_PAIR(colorScheme.primary));
+        printCentered(status_win, 1, "Registration SUCCESS! You will be redirected to the database page shortly.");
+        wrefresh(status_win);
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+        werase(status_win);
+        wrefresh(status_win);
+        backHandlerRegistrationPatient(nullptr, nullptr, win_form, win_body, reg, colorScheme);
+    }
+    else
+    {
+        wbkgd(status_win, COLOR_PAIR(colorScheme.danger));
+        printCentered(status_win, 1, "Registration FAILED! Please try again later.");
+        wrefresh(status_win);
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+        werase(status_win);
+        wrefresh(status_win);
+    }
+}
+
+void renderRegistrationScreenPatient(RegistrationPatient &reg)
+{
+    Color colorScheme;
+    bkgd(COLOR_PAIR(colorScheme.primary));
+    renderRegistrationAccountSectionPatient(reg, colorScheme);
+}
+
+bool submitRegistrationAdmin(RegistrationAdmin &reg)
+{
+    try
+    {
+        UserManager &userManager = UserManager::getInstance();
+        userManager.createAdmin(reg.username, reg.password, reg.fullName, reg.email, reg.contactNumber);
+        return true;
+    }
+    catch (const std::exception &e)
+    {
+        return false;
+    }
+    return false;
+}
+
+void backHandlerRegistrationAdmin(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body, RegistrationAdmin &reg)
+{
+    EventManager &eventManager = EventManager::getInstance();
+
+    if (form)
+    {
+        unpost_form(form);
+        free_form(form);
+    }
+    if (fields)
+    {
+        for (int i = 0; fields[i]; i++)
+        {
+            free_field(fields[i]);
+        }
+    }
+    wclear(win_form);
+    wclear(win_body);
+    delwin(win_form);
+    delwin(win_body);
+    clear();
+    refresh();
+
+    reg.reset();
+    eventManager.switchScreen(Screen::Database);
+}
+
+void renderRegistrationScreenAdmin(RegistrationAdmin &reg)
+{
+    Color colorScheme;
+    bkgd(COLOR_PAIR(colorScheme.primary));
+
+    renderHeader();
+    renderControlInfo();
+
+    int baseline = 11;
+    std::string header = "Register a MedTek+ Admin Account";
+    mvprintw(baseline, (COLS - header.length()) / 2, "%s", header.c_str());
+
+    bkgd(COLOR_PAIR(colorScheme.primary));
+
+    int outer_height = 16;
+    int outer_width = 60;
+
+    int start_y = ((LINES - outer_height) / 2) + 2;
+    int start_x = (COLS - outer_width) / 2;
+
+    WINDOW *win_body = newwin(outer_height, outer_width, start_y, start_x);
+    wbkgd(win_body, COLOR_PAIR(colorScheme.primary));
+    box(win_body, 0, 0);
+
+    std::string subHeader = "Account Information";
+    mvwprintw(win_body, 1, (outer_width - subHeader.length()) / 2, "%s", subHeader.c_str());
+
+    int inner_height = outer_height - 4;
+    int inner_width = outer_width - 4;
+
+    WINDOW *win_form = derwin(win_body, inner_height, inner_width, 2, 2);
+    wbkgd(win_form, COLOR_PAIR(colorScheme.primary));
+    box(win_form, 0, 0);
+
+    FIELD *fields[11];
+    fields[0] = new_field(1, 10, 0, 1, 0, 0);  // Label: Username
+    fields[1] = new_field(1, 30, 0, 13, 0, 0); // Input: Username
+    fields[2] = new_field(1, 10, 2, 1, 0, 0);  // Label: Password
+    fields[3] = new_field(1, 30, 2, 13, 0, 0); // Input: Password
+    fields[4] = new_field(1, 10, 4, 1, 0, 0);  // Label: Full Name
+    fields[5] = new_field(1, 30, 4, 13, 0, 0); // Input: Full Name
+    fields[6] = new_field(1, 10, 6, 1, 0, 0);  // Label: Email
+    fields[7] = new_field(1, 30, 6, 13, 0, 0); // Input: Email
+    fields[8] = new_field(1, 16, 8, 1, 0, 0);  // Label: Contact Number
+    fields[9] = new_field(1, 30, 8, 20, 0, 0); // Input: Contact Number
+    fields[10] = NULL;
+
+    assert(fields[0] && fields[1] && fields[2] && fields[3] && fields[4] &&
+           fields[5] && fields[6] && fields[7] && fields[8] && fields[9]);
+
+    set_field_buffer(fields[0], 0, "Username:");
+    set_field_buffer(fields[1], 0, reg.username.c_str());
+    set_field_buffer(fields[2], 0, "Password:");
+    set_field_buffer(fields[3], 0, reg.password.c_str());
+    set_field_buffer(fields[4], 0, "Full Name:");
+    set_field_buffer(fields[5], 0, reg.fullName.c_str());
+    set_field_buffer(fields[6], 0, "Email:");
+    set_field_buffer(fields[7], 0, reg.email.c_str());
+    set_field_buffer(fields[8], 0, "Contact Number:");
+    set_field_buffer(fields[9], 0, reg.contactNumber.c_str());
+
+    // Set field options
+    for (int i = 0; fields[i]; i++)
+    {
+        if (i % 2 == 0)
+        {                                                               // Labels
+            set_field_opts(fields[i], O_VISIBLE | O_PUBLIC | O_STATIC); // Read-only
+        }
+        else
+        { // Input fields
+            set_field_opts(fields[i], O_VISIBLE | O_PUBLIC | O_EDIT | O_ACTIVE | O_AUTOSKIP);
+        }
+        set_field_back(fields[i], COLOR_PAIR(colorScheme.primary)); // Set background color
+    }
+
+    // Create and post form
+    FORM *form = new_form(fields);
+    assert(form);
+    set_form_win(form, win_form);
+    set_form_sub(form, derwin(win_form, inner_height - 2, inner_width - 2, 1, 1));
+    post_form(form);
+
+    // Refresh windows
+    wrefresh(win_body);
+    wrefresh(win_form);
+
+    // Create a dedicated error window
+    int error_win_height = 1;
+    int error_win_width = 32;
+    int error_win_y = LINES - 2;
+    int error_win_x = (COLS - error_win_width) / 2;
+
+    WINDOW *error_win = newwin(error_win_height, error_win_width, error_win_y, error_win_x);
+    wbkgd(error_win, COLOR_PAIR(colorScheme.danger));
+
+    // Create a dedicated status window
+    int status_win_height = 5;
+    int status_win_width = 34;
+    int status_win_y = LINES - 6;
+    int status_win_x = (COLS - status_win_width) / 2;
+
+    WINDOW *status_win = newwin(status_win_height, status_win_width, status_win_y, status_win_x);
+    box(status_win, 0, 0);
+
+    // Input loop
+    bool done = false;
+    int ch;
+
+    while (!done)
+    {
+        while ((ch = getch()) != '\n')
+        {
+            driver_form(
+                ch,
+                form,
+                fields,
+                win_form,
+                win_body,
+                [&]()
+                { exitHandler(); },
+                [&]()
+                { backHandlerRegistrationAdmin(form, fields, win_form, win_body, reg); });
+        }
+        form_driver(form, REQ_VALIDATION);
+        if (!validateFields(fields, colorScheme))
+        {
+            mvwprintw(error_win, 0, 0, "Please fill all required fields");
+            wrefresh(error_win);
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+            werase(error_win);
+            wrefresh(error_win);
+        }
+        else
+        {
+            done = true;
+        }
+    }
+
+    form_driver(form, REQ_VALIDATION);
+
+    // Extract form data
+    reg.username = trim_whitespaces(field_buffer(fields[1], 0));
+    reg.password = trim_whitespaces(field_buffer(fields[3], 0));
+    reg.fullName = trim_whitespaces(field_buffer(fields[5], 0));
+    reg.email = trim_whitespaces(field_buffer(fields[7], 0));
+    reg.contactNumber = trim_whitespaces(field_buffer(fields[9], 0));
+
+    if (submitRegistrationAdmin(reg))
     {
         wbkgd(status_win, COLOR_PAIR(colorScheme.primary));
         printCentered(status_win, 1, "Registration SUCCESS! You will be redirected to the database page shortly.");
@@ -928,6 +1144,7 @@ void renderRegistrationSelectionSectionPatient(Registration &reg, Color &colorSc
         std::this_thread::sleep_for(std::chrono::seconds(3));
         werase(status_win);
         wrefresh(status_win);
+        backHandlerRegistrationAdmin(form, fields, win_form, win_body, reg);
     }
     else
     {
@@ -938,188 +1155,22 @@ void renderRegistrationSelectionSectionPatient(Registration &reg, Color &colorSc
         werase(status_win);
         wrefresh(status_win);
     }
-    // Clean up
-    delwin(win_form);
-    delwin(win_body);
-    delwin(status_win);
-    clear();
-    refresh();
-    reg.reset();
-    EventManager &eventManager = EventManager::getInstance();
-    eventManager.switchScreen(Screen::Database);
 }
 
-void renderRegistrationScreenPatient(Registration &reg)
-{
-    Color colorScheme;
-    bkgd(COLOR_PAIR(colorScheme.primary));
-    renderRegistrationAccountSectionPatient(reg, colorScheme);
-}
-
-// void renderRegistrationScreenAdmin()
-// {
-//     Color colorScheme;
-//     bkgd(COLOR_PAIR(colorScheme.primary));
-
-//     renderHeader();
-//     renderControlInfo();
-
-//     int baseline = 11;
-//     std::string header = "Register a MedTek+ Admin Account";
-//     mvprintw(baseline, (COLS - header.length()) / 2, "%s", header.c_str());
-
-//     bkgd(COLOR_PAIR(colorScheme.primary));
-
-//     int outer_height = 16;
-//     int outer_width = 60;
-
-//     int start_y = ((LINES - outer_height) / 2) + 2;
-//     int start_x = (COLS - outer_width) / 2;
-
-//     WINDOW *win_body = newwin(outer_height, outer_width, start_y, start_x);
-//     wbkgd(win_body, COLOR_PAIR(colorScheme.primary));
-//     box(win_body, 0, 0);
-
-//     std::string subHeader = "Account Information";
-//     mvwprintw(win_body, 1, (outer_width - subHeader.length()) / 2, "%s", subHeader.c_str());
-
-//     int inner_height = outer_height - 4;
-//     int inner_width = outer_width - 4;
-
-//     WINDOW *win_form = derwin(win_body, inner_height, inner_width, 2, 2);
-//     wbkgd(win_form, COLOR_PAIR(colorScheme.primary));
-//     box(win_form, 0, 0);
-
-//     FIELD *fields[11];
-//     fields[0] = new_field(1, 10, 0, 1, 0, 0);  // Label: Username
-//     fields[1] = new_field(1, 30, 0, 13, 0, 0); // Input: Username
-//     fields[2] = new_field(1, 10, 2, 1, 0, 0);  // Label: Password
-//     fields[3] = new_field(1, 30, 2, 13, 0, 0); // Input: Password
-//     fields[4] = new_field(1, 10, 4, 1, 0, 0);  // Label: Email
-//     fields[5] = new_field(1, 30, 4, 13, 0, 0); // Input: Email
-//     fields[6] = new_field(1, 10, 6, 1, 0, 0);  // Label: Address
-//     fields[7] = new_field(1, 30, 6, 13, 0, 0); // Input: Address
-//     fields[8] = new_field(1, 16, 8, 1, 0, 0);  // Label: Contact Number
-//     fields[9] = new_field(1, 30, 8, 20, 0, 0); // Input: Contact Number
-//     fields[10] = NULL;
-
-//     assert(fields[0] && fields[1] && fields[2] && fields[3] && fields[4] &&
-//            fields[5] && fields[6] && fields[7] && fields[8] && fields[9]);
-
-//     set_field_buffer(fields[0], 0, "Username:");
-//     set_field_buffer(fields[1], 0, reg.username.c_str());
-//     set_field_buffer(fields[2], 0, "Password:");
-//     set_field_buffer(fields[3], 0, reg.password.c_str());
-//     set_field_buffer(fields[4], 0, "Email:");
-//     set_field_buffer(fields[5], 0, reg.email.c_str());
-//     set_field_buffer(fields[6], 0, "Address:");
-//     set_field_buffer(fields[7], 0, reg.address.c_str());
-//     set_field_buffer(fields[8], 0, "Contact Number:");
-//     set_field_buffer(fields[9], 0, reg.contactNumber.c_str());
-
-//     // Set field options
-//     for (int i = 0; fields[i]; i++)
-//     {
-//         if (i % 2 == 0)
-//         {                                                               // Labels
-//             set_field_opts(fields[i], O_VISIBLE | O_PUBLIC | O_STATIC); // Read-only
-//         }
-//         else
-//         { // Input fields
-//             set_field_opts(fields[i], O_VISIBLE | O_PUBLIC | O_EDIT | O_ACTIVE | O_AUTOSKIP);
-//         }
-//         set_field_back(fields[i], COLOR_PAIR(colorScheme.primary)); // Set background color
-//     }
-
-//     // Create and post form
-//     FORM *form = new_form(fields);
-//     assert(form);
-//     set_form_win(form, win_form);
-//     set_form_sub(form, derwin(win_form, inner_height - 2, inner_width - 2, 1, 1));
-//     post_form(form);
-
-//     // Refresh windows
-//     wrefresh(win_body);
-//     wrefresh(win_form);
-
-//     // Create a dedicated error window
-//     int error_win_height = 1;
-//     int error_win_width = 32;
-//     int error_win_y = LINES - 2;
-//     int error_win_x = (COLS - error_win_width) / 2;
-
-//     WINDOW *error_win = newwin(error_win_height, error_win_width, error_win_y, error_win_x);
-//     wbkgd(error_win, COLOR_PAIR(colorScheme.danger));
-
-//     // Input loop
-//     bool done = false;
-//     int ch;
-
-//     while (!done)
-//     {
-//         while ((ch = getch()) != '\n')
-//         {
-//             driver_form(
-//                 ch,
-//                 form,
-//                 fields,
-//                 win_form,
-//                 win_body,
-//                 [&]()
-//                 { exitHandler(); },
-//                 [&]()
-//                 { backHandlerRegistration(form, fields, win_form, win_body, reg, colorScheme); });
-//         }
-//         form_driver(form, REQ_VALIDATION);
-//         if (!validateFields(fields, colorScheme))
-//         {
-//             mvwprintw(error_win, 0, 0, "Please fill all required fields");
-//             wrefresh(error_win);
-//             std::this_thread::sleep_for(std::chrono::seconds(2));
-//             werase(error_win);
-//             wrefresh(error_win);
-//         }
-//         else
-//         {
-//             done = true;
-//         }
-//     }
-
-//     form_driver(form, REQ_VALIDATION);
-
-//     // Extract form data
-//     reg.username = trim_whitespaces(field_buffer(fields[1], 0));
-//     reg.password = trim_whitespaces(field_buffer(fields[3], 0));
-//     reg.email = trim_whitespaces(field_buffer(fields[5], 0));
-//     reg.address = trim_whitespaces(field_buffer(fields[7], 0));
-//     reg.contactNumber = trim_whitespaces(field_buffer(fields[9], 0));
-
-//     // Clean up
-//     unpost_form(form);
-//     free_form(form);
-//     for (int i = 0; fields[i]; i++)
-//     {
-//         free_field(fields[i]);
-//     }
-//     wclear(win_form);
-//     wclear(win_body);
-//     delwin(win_form);
-//     delwin(win_body);
-//     delwin(error_win);
-//     clear();
-//     refresh();
-// }
-
-void handleDashboardOptions(Dashboard &dash, std::string &roleStr)
+void handleDashboardOptions(Dashboard &dash, Profile &p)
 {
     EventManager &eventManager = EventManager::getInstance();
+    UserManager &userManager = UserManager::getInstance();
+
     switch (dash.selectedIndex)
     {
     case 0:
         eventManager.switchScreen(Screen::Database);
         dash.reset();
         break;
-    case 1:
+    case 1: 
+        p.prevScreen = Screen::Dashboard;
+        p.user = userManager.getCurrentUser();
         eventManager.switchScreen(Screen::Profile);
         dash.reset();
         break;
@@ -1132,7 +1183,7 @@ void handleDashboardOptions(Dashboard &dash, std::string &roleStr)
     }
 }
 
-void renderDashboardScreen(Dashboard &dash)
+void renderDashboardScreen(Dashboard &dash, Profile &p)
 {
     Color colorScheme;
     EventManager &eventManager = EventManager::getInstance();
@@ -1176,8 +1227,6 @@ void renderDashboardScreen(Dashboard &dash)
     bool done = false;
     keypad(win_form, TRUE);
     curs_set(0);
-
-    std::string roleStr = currentUser->getRoleToString(currentUser->role);
 
     while (!done)
     {
@@ -1250,7 +1299,7 @@ void renderDashboardScreen(Dashboard &dash)
     delwin(win_body);
     clear();
     refresh();
-    handleDashboardOptions(dash, roleStr);
+    handleDashboardOptions(dash, p);
 }
 
 void renderDatabaseControlInfo(Database &db, Color &colorScheme)
@@ -1285,12 +1334,20 @@ void renderDatabaseControlInfo(Database &db, Color &colorScheme)
     delwin(win_outer);
 }
 
-void handleDatabaseControls(Database &db, UserManager &userManager)
+void handleDatabaseControls(Database &db, UserManager &userManager, EventManager &eventManager, WINDOW *win_form, WINDOW *win_body, Profile &p)
 {
     if (db.listMatrixCurrent.empty())
         return;
     switch (db.selectedCol)
     {
+    case 1:
+        wclear(win_form);
+        wclear(win_body);
+        delwin(win_form);
+        delwin(win_body);
+        p.user = userManager.getUserById(db.listMatrixCurrent[db.selectedRow][db.listMatrixCurrent[db.selectedRow].size() - 1]);
+        p.prevScreen = Screen::Database;
+        eventManager.switchScreen(Screen::Profile);
     case 3:
         userManager.deleteUserById(db.listMatrixCurrent[db.selectedRow][db.listMatrixCurrent[db.selectedRow].size() - 1]);
 
@@ -1327,7 +1384,7 @@ void handleDatabaseControls(Database &db, UserManager &userManager)
     }
 }
 
-void renderDatabaseScreen(Database &db)
+void renderDatabaseScreen(Database &db, Profile &p)
 {
     Color colorScheme;
     EventManager &eventManager = EventManager::getInstance();
@@ -1472,7 +1529,7 @@ void renderDatabaseScreen(Database &db)
         switch (ch)
         {
         case '\n':
-            handleDatabaseControls(db, userManager);
+            handleDatabaseControls(db, userManager, eventManager, win_form, win_body, p);
             break;
         case '+':
             done = true;
@@ -1539,14 +1596,179 @@ void renderDatabaseScreen(Database &db)
     wclear(win_body);
     delwin(win_form);
     delwin(win_body);
-    db.reset();
     switch (ch)
     {
     case '+':
-        eventManager.switchScreen(Screen::RegisterPatient);
+        db.currentFilter == Database::Filter::patient ? eventManager.switchScreen(Screen::RegisterPatient) : eventManager.switchScreen(Screen::RegisterAdmin);
         break;
     default:
+        db.reset();
         eventManager.switchScreen(Screen::Dashboard);
         break;
+    }
+}
+
+void backHandlerRegistrationProfile(WINDOW *win_form, WINDOW *win_body, Profile &p)
+{
+    delwin(win_form);
+    delwin(win_body);
+    EventManager &eventManager = EventManager::getInstance();
+    eventManager.switchScreen(p.prevScreen);
+    p.reset();
+}
+
+void renderProfileScreen(Profile &p)
+{
+    Color colorScheme;
+    bkgd(COLOR_PAIR(colorScheme.primary));
+    int ch;
+
+    renderHeader();
+    renderControlInfo();
+
+    if (p.user->getRole() == Role::Patient)
+    {
+        auto patient = std::dynamic_pointer_cast<Patient>(p.user);
+
+        int baseline = 11;
+        std::string header = "Viewing " + patient->fullName + "'s account";
+        mvprintw(baseline, (COLS - header.length()) / 2, "%s", header.c_str());
+
+        bkgd(COLOR_PAIR(colorScheme.primary));
+
+        int outer_height = 26;
+        int outer_width = 60;
+        int start_y = ((LINES - outer_height) / 2) + 4;
+        int start_x = (COLS - outer_width) / 2;
+
+        WINDOW *win_body = newwin(outer_height, outer_width, start_y, start_x);
+        wbkgd(win_body, COLOR_PAIR(colorScheme.primary));
+        box(win_body, 0, 0);
+
+        std::string subHeader = "Account Information";
+        mvwprintw(win_body, 1, (outer_width - subHeader.length()) / 2, "%s", subHeader.c_str());
+
+        int inner_height = outer_height - 4;
+        int inner_width = outer_width - 4;
+
+        WINDOW *win_form = derwin(win_body, inner_height, inner_width, 2, 2);
+        wbkgd(win_form, COLOR_PAIR(colorScheme.primary));
+        box(win_form, 0, 0);
+
+        std::vector<std::pair<std::string, std::string>> fieldValues = {
+            {"ID: ", patient->getId()},
+            {"Created at: ", patient->getCreatedAt()},
+            {"Full Name: ", patient->getFullName()},
+            {"Username: ", patient->getUsername()},
+            {"Age: ", std::to_string(patient->age)},
+            {"Gender: ", patient->gender},
+            {"Marital Status: ", patient->maritalStatus},
+            {"Religion: ", patient->religion},
+            {"Nationality: ", patient->nationality},
+            {"Race: ", patient->race},
+            {"IC Number: ", patient->identityCardNumber},
+            {"Email: ", patient->email},
+            {"Password: ", patient->password},
+            {"Contact No.: ", patient->contactNumber},
+            {"Emergency Contact Name: ", patient->emergencyContactName},
+            {"Emergency Contact No.: ", patient->emergencyContactNumber},
+            {"BMI: ", std::to_string(patient->bmi)},
+            {"Height: ", patient->height},
+            {"Weight: ", patient->weight},
+            {"Address: ", patient->address}};
+
+        int row = 1;
+        for (const auto &field : fieldValues)
+        {
+            mvwprintw(win_form, row, 2, "%s%s", field.first.c_str(), field.second.c_str());
+            row++;
+        }
+
+        wrefresh(win_form);
+        wrefresh(win_body);
+
+        while (true)
+        {
+            ch = getch();
+            if (ch == 2)
+            {
+                backHandlerRegistrationProfile(win_form, win_body, p);
+                break;
+            }
+            else if (ch == 27)
+            {
+                exitHandler();
+            }
+            else
+            {
+                continue;
+            }
+        }
+    }
+    else
+    {
+        auto admin = std::dynamic_pointer_cast<Admin>(p.user);
+
+        int baseline = 11;
+        std::string header = "Viewing " + admin->fullName + "'s account";
+        mvprintw(baseline, (COLS - header.length()) / 2, "%s", header.c_str());
+
+        bkgd(COLOR_PAIR(colorScheme.primary));
+
+        int outer_height = 16;
+        int outer_width = 60;
+        int start_y = ((LINES - outer_height) / 2) + 2;
+        int start_x = (COLS - outer_width) / 2;
+
+        WINDOW *win_body = newwin(outer_height, outer_width, start_y, start_x);
+        wbkgd(win_body, COLOR_PAIR(colorScheme.primary));
+        box(win_body, 0, 0);
+
+        std::string subHeader = "Account Information";
+        mvwprintw(win_body, 1, (outer_width - subHeader.length()) / 2, "%s", subHeader.c_str());
+
+        int inner_height = outer_height - 4;
+        int inner_width = outer_width - 4;
+
+        WINDOW *win_form = derwin(win_body, inner_height, inner_width, 2, 2);
+        wbkgd(win_form, COLOR_PAIR(colorScheme.primary));
+        box(win_form, 0, 0);
+
+        std::vector<std::pair<std::string, std::string>> fieldValues = {
+            {"ID: ", admin->getId()},
+            {"Created at: ", admin->getCreatedAt()},
+            {"Full Name: ", admin->getFullName()},
+            {"Username: ", admin->getUsername()},
+            {"Email: ", admin->email},
+            {"Password: ", admin->password},
+            {"Contact No.: ", admin->contactNumber}};
+
+        int row = 1;
+        for (const auto &field : fieldValues)
+        {
+            mvwprintw(win_form, row, 2, "%s%s", field.first.c_str(), field.second.c_str());
+            row++;
+        }
+
+        wrefresh(win_form);
+        wrefresh(win_body);
+
+        while (true)
+        {
+            ch = getch();
+            if (ch == 2)
+            {
+                backHandlerRegistrationProfile(win_form, win_body, p);
+                break;
+            }
+            else if (ch == 27)
+            {
+                exitHandler();
+            }
+            else
+            {
+                continue;
+            }
+        }
     }
 }

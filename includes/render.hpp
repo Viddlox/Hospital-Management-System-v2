@@ -20,6 +20,7 @@
 #include <cctype>
 #include <math.h>
 #include <algorithm>
+#include <memory>
 
 #include <csignal>
 #if defined(_WIN32) || defined(_WIN64)
@@ -29,8 +30,12 @@
 #include <unistd.h>
 #endif
 
+// Forward declarations
 class EventManager;
 class UserManager;
+class User;
+class Admin;
+class Patient;
 
 enum class Screen
 {
@@ -49,7 +54,38 @@ struct Color
     int danger = 3;
 };
 
-struct Registration
+struct Profile
+{
+    std::shared_ptr<User> user;
+    Screen prevScreen = Screen::Dashboard;
+
+    void reset()
+    {
+        user = nullptr;
+        prevScreen = Screen::Dashboard;
+    }
+};
+
+struct RegistrationAdmin
+{
+    // account information
+    std::string username = "";
+    std::string password = "";
+    std::string email = "";
+    std::string fullName = "";
+    std::string contactNumber = "";
+
+    void reset()
+    {
+        username = "";
+        password = "";
+        email = "";
+        fullName = "";
+        contactNumber = "";
+    }
+};
+
+struct RegistrationPatient
 {
     std::vector<std::string> genderArr = {
         "Male",
@@ -121,7 +157,7 @@ struct Registration
     std::string nationality = "";
     std::vector<int> selectedIndices;
     int currentMenu = 0;
-    Registration()
+    RegistrationPatient()
     {
         selectedIndices = std::vector<int>(menuArrs.size(), 0);
     }
@@ -258,20 +294,25 @@ void initializeColors();
 void clearScrollbackBuffer();
 char *trim_whitespaces(char *str);
 void renderLoginScreen();
-void renderDashboardScreen(Dashboard &dash);
+void renderDashboardScreen(Dashboard &dash, Profile &p);
 void renderControlInfo();
-void renderRegistrationScreenPatient(Registration &reg);
-void renderRegistrationAccountSectionPatient(Registration &reg, Color &colorScheme);
-void renderRegistrationPersonalSectionPatient(Registration &reg, Color &colorScheme);
-void renderRegistrationSelectionSectionPatient(Registration &reg, Color &colorScheme);
-void backHandlerRegistration(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body, Registration &reg, Color &colorScheme);
+void renderRegistrationScreenAdmin(RegistrationAdmin &reg);
+void renderRegistrationScreenPatient(RegistrationPatient &reg);
+void renderRegistrationAccountSectionPatient(RegistrationPatient &reg, Color &colorScheme);
+void renderRegistrationPersonalSectionPatient(RegistrationPatient &reg, Color &colorScheme);
+void renderRegistrationSelectionSectionPatient(RegistrationPatient &reg, Color &colorScheme);
+void backHandlerRegistrationPatient(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body, RegistrationPatient &reg, Color &colorScheme);
+void backHandlerRegistrationAdmin(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body, RegistrationAdmin &reg);
+void backHandlerRegistrationProfile(WINDOW *win_form, WINDOW *win_body, Profile &p);
 void exitHandler();
 void renderHorizontalMenuStack(WINDOW *win, const std::vector<std::string> &items, const std::string &title, int y_offset, int &selected_index, int start_x);
 bool validateFields(FIELD **fields, Color &colorScheme);
 int calculateAge(const std::string &identityCardNumber);
 double calculateBMI(const std::string &weight, const std::string &height);
-bool submitRegistration(Registration &reg, Color &colorScheme);
-void handleDashboardOptions(Dashboard &dash, std::string &roleStr);
-void renderDatabaseScreen(Database &db);
+bool submitRegistrationPatient(RegistrationPatient &reg);
+void handleDashboardOptions(Dashboard &dash, Profile &p);
+void renderDatabaseScreen(Database &db, Profile &p);
+void handleDatabaseControls(Database &db, UserManager &userManager, EventManager &eventManager, WINDOW *win_form, WINDOW *win_body, Profile &p);
+void renderProfileScreen(Profile &p);
 
 #endif
