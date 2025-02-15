@@ -13,12 +13,6 @@ class EventManager
 private:
     Screen screen;
     UserManager &userManager = UserManager::getInstance();
-    RegistrationPatient reg;
-    RegistrationAdmin regA;
-    Dashboard dash;
-    Database db;
-    Profile p;
-    Admission a;
     bool isRunning = false;
 
     EventManager() : screen(Screen::Login) {}
@@ -44,34 +38,34 @@ private:
             curs_set(0);
             renderHeader();
             renderControlInfo();
-            renderDashboardScreen(dash, p);
+            renderDashboardScreen();
             wrefresh(stdscr);
             break;
         case Screen::RegisterPatient:
             curs_set(1);
-            renderRegistrationScreenPatient(reg);
+            renderRegistrationScreenPatient();
             wrefresh(stdscr);
             break;
         case Screen::RegisterAdmin:
             curs_set(1);
-            renderRegistrationScreenAdmin(regA);
+            renderRegistrationScreenAdmin();
             wrefresh(stdscr);
             break;
         case Screen::Database:
-            renderDatabaseScreen(db, p);
+            renderDatabaseScreen();
             wrefresh(stdscr);
             break;
         case Screen::Profile:
             curs_set(0);
-            renderProfileScreen(p);
+            renderProfileScreen();
             wrefresh(stdscr);
             break;
         case Screen::ProfileAdmissions:
-            renderProfileAdmissionsScreen(p);
+            renderProfileAdmissionsScreen();
             wrefresh(stdscr);
             break;
         case Screen::Admission:
-            renderAdmissionScreen(a);
+            renderAdmissionScreen();
             wrefresh(stdscr);
             break;
         default:

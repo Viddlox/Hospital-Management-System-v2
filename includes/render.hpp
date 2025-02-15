@@ -23,6 +23,7 @@
 #include <memory>
 #include <map>
 #include "Admissions.hpp"
+#include "utils.hpp"
 
 #include <csignal>
 #if defined(_WIN32) || defined(_WIN64)
@@ -276,6 +277,19 @@ struct RegistrationAdmin
         fullName = "";
         contactNumber = "";
     }
+    // Singleton Implementation
+    static RegistrationAdmin &getInstance()
+    {
+        static RegistrationAdmin instance;
+        return instance;
+    }
+
+    // Delete copy constructor and assignment operator to prevent accidental copies
+    RegistrationAdmin(const RegistrationAdmin &) = delete;
+    RegistrationAdmin &operator=(const RegistrationAdmin &) = delete;
+
+private:
+    RegistrationAdmin() {} // Private constructor to prevent multiple instances
 };
 
 struct RegistrationPatient
@@ -350,10 +364,6 @@ struct RegistrationPatient
     std::string nationality = "";
     std::vector<int> selectedIndices;
     int currentMenu = 0;
-    RegistrationPatient()
-    {
-        selectedIndices = std::vector<int>(menuArrs.size(), 0);
-    }
     void reset()
     {
         currentSection = Section::account;
@@ -376,6 +386,19 @@ struct RegistrationPatient
         selectedIndices = std::vector<int>(menuArrs.size(), 0);
         currentMenu = 0;
     }
+    // Singleton Implementation
+    static RegistrationPatient &getInstance()
+    {
+        static RegistrationPatient instance;
+        return instance;
+    }
+
+    // Delete copy constructor and assignment operator to prevent accidental copies
+    RegistrationPatient(const RegistrationPatient &) = delete;
+    RegistrationPatient &operator=(const RegistrationPatient &) = delete;
+
+private:
+    RegistrationPatient() { selectedIndices = std::vector<int>(menuArrs.size(), 0); } // Private constructor to prevent multiple instances
 };
 
 struct Dashboard
@@ -389,6 +412,19 @@ struct Dashboard
     {
         selectedIndex = 0;
     }
+    // Singleton Implementation
+    static Dashboard &getInstance()
+    {
+        static Dashboard instance;
+        return instance;
+    }
+
+    // Delete copy constructor and assignment operator to prevent accidental copies
+    Dashboard(const Dashboard &) = delete;
+    Dashboard &operator=(const Dashboard &) = delete;
+
+private:
+    Dashboard() {} // Private constructor to prevent multiple instances
 };
 
 struct Database
@@ -470,35 +506,45 @@ struct Database
         }
         return res;
     }
+    // Singleton Implementation
+    static Database &getInstance()
+    {
+        static Database instance;
+        return instance;
+    }
+
+    // Delete copy constructor and assignment operator to prevent accidental copies
+    Database(const Database &) = delete;
+    Database &operator=(const Database &) = delete;
+
+private:
+    Database() {} // Private constructor to prevent multiple instances
 };
 
+void renderLoginScreen();
+void renderDashboardScreen();
+void handleDashboardOptions();
 void renderHeader();
 void clearScreen();
 void initializeColors();
 void clearScrollbackBuffer();
-char *trim_whitespaces(char *str);
-void renderLoginScreen();
-void renderDashboardScreen(Dashboard &dash, Profile &p);
 void renderControlInfo();
-void renderRegistrationScreenAdmin(RegistrationAdmin &reg);
-void renderRegistrationScreenPatient(RegistrationPatient &reg);
-void renderRegistrationAccountSectionPatient(RegistrationPatient &reg, Color &colorScheme);
-void renderRegistrationPersonalSectionPatient(RegistrationPatient &reg, Color &colorScheme);
-void renderRegistrationSelectionSectionPatient(RegistrationPatient &reg, Color &colorScheme);
-void backHandlerRegistrationPatient(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body, RegistrationPatient &reg, Color &colorScheme);
-void backHandlerRegistrationAdmin(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body, RegistrationAdmin &reg);
-void backHandlerRegistrationProfile(WINDOW *win_form, WINDOW *win_body, Profile &p);
+void renderRegistrationScreenAdmin();
+void renderRegistrationScreenPatient();
+void renderRegistrationAccountSectionPatient();
+void renderRegistrationPersonalSectionPatient();
+void renderRegistrationSelectionSectionPatient();
+void backHandlerRegistrationPatient(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body);
+void backHandlerRegistrationAdmin(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body);
+void backHandlerRegistrationProfile(WINDOW *win_form, WINDOW *win_body);
 void exitHandler();
 void renderHorizontalMenuStack(WINDOW *win, const std::vector<std::string> &items, const std::string &title, int y_offset, int &selected_index, int start_x);
-bool validateFields(FIELD **fields, Color &colorScheme);
-int calculateAge(const std::string &identityCardNumber);
-double calculateBMI(const std::string &weight, const std::string &height);
-bool submitRegistrationPatient(RegistrationPatient &reg);
-void handleDashboardOptions(Dashboard &dash, Profile &p);
-void renderDatabaseScreen(Database &db, Profile &p);
-void handleDatabaseControls(Database &db, UserManager &userManager, EventManager &eventManager, WINDOW *win_form, WINDOW *win_body, Profile &p);
-void renderProfileScreen(Profile &p);
-void renderProfileAdmissionsScreen(Profile &p);
-void renderAdmissionScreen(Admission &a);
+bool validateFields(FIELD **fields);
+bool submitRegistrationPatient();
+void renderDatabaseScreen();
+void handleDatabaseControls(WINDOW *win_form, WINDOW *win_body);
+void renderProfileScreen();
+void renderProfileAdmissionsScreen();
+void renderAdmissionScreen();
 
 #endif

@@ -20,7 +20,7 @@ void initializeColors()
 
 void renderHeader()
 {
-    Color colorScheme;
+    Color &colorScheme = Color::getInstance();
     attron(COLOR_PAIR(colorScheme.primary));
     bkgd(COLOR_PAIR(colorScheme.primary));
 
@@ -61,29 +61,6 @@ void clearScreen()
 void clearScrollbackBuffer()
 {
     std::cout << "\033[3J" << std::flush;
-}
-
-char *trim_whitespaces(char *str)
-{
-    char *end;
-
-    // trim leading space
-    while (isspace(*str))
-        str++;
-
-    if (*str == 0) // all spaces?
-        return str;
-
-    // trim trailing space
-    end = str + strnlen(str, 128) - 1;
-
-    while (end > str && isspace(*end))
-        end--;
-
-    // write new null terminator
-    *(end + 1) = '\0';
-
-    return str;
 }
 
 std::vector<std::string> split_string(std::string toSplit, int maxLength)
@@ -132,7 +109,7 @@ void renderLoginScreen()
 {
     EventManager &eventManager = EventManager::getInstance();
     UserManager &userManager = UserManager::getInstance();
-    Color colorScheme;
+    Color &colorScheme = Color::getInstance();
     userManager.setCurrentUser(nullptr);
 
     bkgd(COLOR_PAIR(colorScheme.primary));
@@ -276,7 +253,7 @@ void renderLoginScreen()
 
 void renderControlInfo()
 {
-    Color colorScheme;
+    Color &colorScheme = Color::getInstance();
     Controls controls;
 
     int outer_width = 38;                              // Increased width for better readability
@@ -336,9 +313,10 @@ void exitHandler()
     EventManager &eventManager = EventManager::getInstance();
     eventManager.exit();
 }
-void backHandlerRegistrationPatient(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body, RegistrationPatient &reg, Color &colorScheme)
+void backHandlerRegistrationPatient(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body)
 {
     EventManager &eventManager = EventManager::getInstance();
+    RegistrationPatient &reg = RegistrationPatient::getInstance();
     RegistrationPatient::Section section = reg.currentSection;
 
     if (form)
@@ -363,10 +341,10 @@ void backHandlerRegistrationPatient(FORM *form, FIELD **fields, WINDOW *win_form
     switch (section)
     {
     case RegistrationPatient::Section::selection:
-        renderRegistrationPersonalSectionPatient(reg, colorScheme);
+        renderRegistrationPersonalSectionPatient();
         break;
     case RegistrationPatient::Section::personal:
-        renderRegistrationAccountSectionPatient(reg, colorScheme);
+        renderRegistrationAccountSectionPatient();
         break;
     case RegistrationPatient::Section::account:
         reg.reset();
@@ -422,7 +400,7 @@ void driver_form(int ch, FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *w
     wrefresh(win_form);
 }
 
-bool validateFields(FIELD **fields, Color &colorScheme)
+bool validateFields(FIELD **fields)
 {
     for (int i = 0; fields[i]; i++)
     {
@@ -439,10 +417,13 @@ bool validateFields(FIELD **fields, Color &colorScheme)
     return true;
 }
 
-void renderRegistrationAccountSectionPatient(RegistrationPatient &reg, Color &colorScheme)
+void renderRegistrationAccountSectionPatient()
 {
     renderHeader();
     renderControlInfo();
+
+    Color &colorScheme = Color::getInstance();
+    RegistrationPatient &reg = RegistrationPatient::getInstance();
 
     int baseline = 11;
     std::string header = "Register a MedTek+ Patient Account";
@@ -549,10 +530,10 @@ void renderRegistrationAccountSectionPatient(RegistrationPatient &reg, Color &co
                 [&]()
                 { exitHandler(); },
                 [&]()
-                { backHandlerRegistrationPatient(form, fields, win_form, win_body, reg, colorScheme); });
+                { backHandlerRegistrationPatient(form, fields, win_form, win_body); });
         }
         form_driver(form, REQ_VALIDATION);
-        if (!validateFields(fields, colorScheme))
+        if (!validateFields(fields))
         {
             mvwprintw(error_win, 0, 0, "Please fill all required fields");
             wrefresh(error_win);
@@ -590,13 +571,15 @@ void renderRegistrationAccountSectionPatient(RegistrationPatient &reg, Color &co
     clear();
     refresh();
 
-    renderRegistrationPersonalSectionPatient(reg, colorScheme);
+    renderRegistrationPersonalSectionPatient();
 }
 
-void renderRegistrationPersonalSectionPatient(RegistrationPatient &reg, Color &colorScheme)
+void renderRegistrationPersonalSectionPatient()
 {
     renderHeader();
     renderControlInfo();
+    Color &colorScheme = Color::getInstance();
+    RegistrationPatient &reg = RegistrationPatient::getInstance();
 
     int baseline = 11;
     std::string header = "Register a MedTek+ Patient Account";
@@ -707,10 +690,10 @@ void renderRegistrationPersonalSectionPatient(RegistrationPatient &reg, Color &c
                 [&]()
                 { exitHandler(); },
                 [&]()
-                { backHandlerRegistrationPatient(form, fields, win_form, win_body, reg, colorScheme); });
+                { backHandlerRegistrationPatient(form, fields, win_form, win_body); });
         }
         form_driver(form, REQ_VALIDATION);
-        if (!validateFields(fields, colorScheme))
+        if (!validateFields(fields))
         {
             mvwprintw(error_win, 0, 0, "Please fill all required fields");
             wrefresh(error_win);
@@ -749,7 +732,7 @@ void renderRegistrationPersonalSectionPatient(RegistrationPatient &reg, Color &c
     clear();
     refresh();
 
-    renderRegistrationSelectionSectionPatient(reg, colorScheme);
+    renderRegistrationSelectionSectionPatient();
 }
 
 // Function to render a custom menu
@@ -776,47 +759,9 @@ void renderHorizontalMenuStack(WINDOW *win, const std::vector<std::string> &item
     }
 }
 
-int calculateAge(const std::string &identityCardNumber)
+bool submitRegistrationPatient()
 {
-    // Extract year, month, and day
-    int year = std::stoi(identityCardNumber.substr(0, 2));
-    int month = std::stoi(identityCardNumber.substr(2, 2));
-    int day = std::stoi(identityCardNumber.substr(4, 2));
-
-    // Get the current date
-    time_t now = time(0);
-    tm *localTime = localtime(&now);
-    int currentYear = 1900 + localTime->tm_year;
-    int currentMonth = 1 + localTime->tm_mon;
-    int currentDay = localTime->tm_mday;
-
-    // Determine the full year (assuming IC numbers use 1900s and 2000s)
-    if (year >= 0 && year <= 24)
-    { // Adjust based on reasonable birth years
-        year += 2000;
-    }
-    else
-    {
-        year += 1900;
-    }
-
-    // Calculate age
-    int age = currentYear - year;
-    if (currentMonth < month || (currentMonth == month && currentDay < day))
-    {
-        age--; // Adjust if birthday hasn't occurred yet this year
-    }
-
-    return age;
-}
-
-double calculateBMI(const std::string &weight, const std::string &height)
-{
-    return std::stod(weight) / pow((std::stod(height) / 100.0), 2);
-}
-
-bool submitRegistrationPatient(RegistrationPatient &reg)
-{
+    RegistrationPatient &reg = RegistrationPatient::getInstance();
     try
     {
         UserManager &userManager = UserManager::getInstance();
@@ -833,8 +778,10 @@ bool submitRegistrationPatient(RegistrationPatient &reg)
     return false;
 }
 
-void renderRegistrationSelectionSectionPatient(RegistrationPatient &reg, Color &colorScheme)
+void renderRegistrationSelectionSectionPatient()
 {
+    Color &colorScheme = Color::getInstance();
+    RegistrationPatient &reg = RegistrationPatient::getInstance();
     renderHeader();
     renderControlInfo();
     reg.currentSection = RegistrationPatient::Section::selection;
@@ -940,12 +887,12 @@ void renderRegistrationSelectionSectionPatient(RegistrationPatient &reg, Color &
             done = true;
             break;
         case 2: // Custom key for "Back"
-            backHandlerRegistrationPatient(nullptr, nullptr, win_form, win_body, reg, colorScheme);
+            backHandlerRegistrationPatient(nullptr, nullptr, win_form, win_body);
             break;
         }
     }
 
-    if (submitRegistrationPatient(reg))
+    if (submitRegistrationPatient())
     {
         wbkgd(status_win, COLOR_PAIR(colorScheme.primary));
         printCentered(status_win, 1, "Registration SUCCESS! You will be redirected to the database page shortly.");
@@ -953,7 +900,7 @@ void renderRegistrationSelectionSectionPatient(RegistrationPatient &reg, Color &
         std::this_thread::sleep_for(std::chrono::seconds(2));
         werase(status_win);
         wrefresh(status_win);
-        backHandlerRegistrationPatient(nullptr, nullptr, win_form, win_body, reg, colorScheme);
+        backHandlerRegistrationPatient(nullptr, nullptr, win_form, win_body);
     }
     else
     {
@@ -966,11 +913,11 @@ void renderRegistrationSelectionSectionPatient(RegistrationPatient &reg, Color &
     }
 }
 
-void renderRegistrationScreenPatient(RegistrationPatient &reg)
+void renderRegistrationScreenPatient()
 {
-    Color colorScheme;
+    Color &colorScheme = Color::getInstance();
     bkgd(COLOR_PAIR(colorScheme.primary));
-    renderRegistrationAccountSectionPatient(reg, colorScheme);
+    renderRegistrationAccountSectionPatient();
 }
 
 bool submitRegistrationAdmin(RegistrationAdmin &reg)
@@ -988,9 +935,10 @@ bool submitRegistrationAdmin(RegistrationAdmin &reg)
     return false;
 }
 
-void backHandlerRegistrationAdmin(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body, RegistrationAdmin &reg)
+void backHandlerRegistrationAdmin(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body)
 {
     EventManager &eventManager = EventManager::getInstance();
+    RegistrationAdmin &reg = RegistrationAdmin::getInstance();
 
     if (form)
     {
@@ -1015,9 +963,10 @@ void backHandlerRegistrationAdmin(FORM *form, FIELD **fields, WINDOW *win_form, 
     eventManager.switchScreen(Screen::Database);
 }
 
-void renderRegistrationScreenAdmin(RegistrationAdmin &reg)
+void renderRegistrationScreenAdmin()
 {
-    Color colorScheme;
+    Color &colorScheme = Color::getInstance();
+    RegistrationAdmin &reg = RegistrationAdmin::getInstance();
     bkgd(COLOR_PAIR(colorScheme.primary));
 
     renderHeader();
@@ -1136,10 +1085,10 @@ void renderRegistrationScreenAdmin(RegistrationAdmin &reg)
                 [&]()
                 { exitHandler(); },
                 [&]()
-                { backHandlerRegistrationAdmin(form, fields, win_form, win_body, reg); });
+                { backHandlerRegistrationAdmin(form, fields, win_form, win_body); });
         }
         form_driver(form, REQ_VALIDATION);
-        if (!validateFields(fields, colorScheme))
+        if (!validateFields(fields))
         {
             mvwprintw(error_win, 0, 0, "Please fill all required fields");
             wrefresh(error_win);
@@ -1170,7 +1119,7 @@ void renderRegistrationScreenAdmin(RegistrationAdmin &reg)
         std::this_thread::sleep_for(std::chrono::seconds(3));
         werase(status_win);
         wrefresh(status_win);
-        backHandlerRegistrationAdmin(form, fields, win_form, win_body, reg);
+        backHandlerRegistrationAdmin(form, fields, win_form, win_body);
     }
     else
     {
@@ -1183,10 +1132,12 @@ void renderRegistrationScreenAdmin(RegistrationAdmin &reg)
     }
 }
 
-void handleDashboardOptions(Dashboard &dash, Profile &p)
+void handleDashboardOptions()
 {
     EventManager &eventManager = EventManager::getInstance();
     UserManager &userManager = UserManager::getInstance();
+    Profile &p = Profile::getInstance();
+    Dashboard &dash = Dashboard::getInstance();
 
     switch (dash.selectedIndex)
     {
@@ -1209,11 +1160,12 @@ void handleDashboardOptions(Dashboard &dash, Profile &p)
     }
 }
 
-void renderDashboardScreen(Dashboard &dash, Profile &p)
+void renderDashboardScreen()
 {
-    Color colorScheme;
+    Color &colorScheme = Color::getInstance();
     EventManager &eventManager = EventManager::getInstance();
     UserManager &userManager = UserManager::getInstance();
+    Dashboard &dash = Dashboard::getInstance();
     auto currentUser = userManager.getCurrentUser();
     bkgd(COLOR_PAIR(colorScheme.primary));
 
@@ -1327,11 +1279,16 @@ void renderDashboardScreen(Dashboard &dash, Profile &p)
     delwin(win_body);
     clear();
     refresh();
-    handleDashboardOptions(dash, p);
+    handleDashboardOptions();
 }
 
-void handleDatabaseControls(Database &db, UserManager &userManager, EventManager &eventManager, WINDOW *win_form, WINDOW *win_body, Profile &p)
+void handleDatabaseControls(WINDOW *win_form, WINDOW *win_body)
 {
+    UserManager &userManager = UserManager::getInstance();
+    EventManager &eventManager = EventManager::getInstance();
+    Profile &p = Profile::getInstance();
+    Database &db = Database::getInstance();
+
     if (db.listMatrixCurrent.empty())
         return;
     switch (db.selectedCol)
@@ -1380,11 +1337,12 @@ void handleDatabaseControls(Database &db, UserManager &userManager, EventManager
     }
 }
 
-void renderDatabaseScreen(Database &db, Profile &p)
+void renderDatabaseScreen()
 {
-    Color colorScheme;
+    Color &colorScheme = Color::getInstance();
     EventManager &eventManager = EventManager::getInstance();
     UserManager &userManager = UserManager::getInstance();
+    Database &db = Database::getInstance();
 
     renderHeader();
     renderControlInfo();
@@ -1524,7 +1482,7 @@ void renderDatabaseScreen(Database &db, Profile &p)
         switch (ch)
         {
         case '\n':
-            handleDatabaseControls(db, userManager, eventManager, win_form, win_body, p);
+            handleDatabaseControls(win_form, win_body);
             break;
         case '+':
             done = true;
@@ -1603,19 +1561,21 @@ void renderDatabaseScreen(Database &db, Profile &p)
     }
 }
 
-void backHandlerRegistrationProfile(WINDOW *win_form, WINDOW *win_body, Profile &p)
+void backHandlerRegistrationProfile(WINDOW *win_form, WINDOW *win_body)
 {
     delwin(win_form);
     delwin(win_body);
     EventManager &eventManager = EventManager::getInstance();
+    Profile &p = Profile::getInstance();
     eventManager.switchScreen(p.prevScreen);
     p.reset();
 }
 
-void renderProfileAdmissionsScreen(Profile &p)
+void renderProfileAdmissionsScreen()
 {
-    Color colorScheme;
+    Color &colorScheme = Color::getInstance();
     EventManager &eventManager = EventManager::getInstance();
+    Profile &p = Profile::getInstance();
 
     renderHeader();
     renderControlInfo();
@@ -1788,10 +1748,11 @@ void renderProfileAdmissionsScreen(Profile &p)
     eventManager.switchScreen(Screen::Profile);
 }
 
-void renderProfileScreen(Profile &p)
+void renderProfileScreen()
 {
-    Color colorScheme;
+    Color &colorScheme = Color::getInstance();
     EventManager &eventManager = EventManager::getInstance();
+    Profile &p = Profile::getInstance();
 
     renderHeader();
     renderControlInfo();
@@ -1865,7 +1826,7 @@ void renderProfileScreen(Profile &p)
             switch (ch)
             {
             case 2:
-                backHandlerRegistrationProfile(win_form, win_body, p);
+                backHandlerRegistrationProfile(win_form, win_body);
                 return;
             case 27:
                 exitHandler();
@@ -1935,7 +1896,7 @@ void renderProfileScreen(Profile &p)
             ch = getch();
             if (ch == 2)
             {
-                backHandlerRegistrationProfile(win_form, win_body, p);
+                backHandlerRegistrationProfile(win_form, win_body);
                 break;
             }
             else if (ch == 27)
@@ -1950,10 +1911,11 @@ void renderProfileScreen(Profile &p)
     }
 }
 
-void renderAdmissionScreen(Admission &a)
+void renderAdmissionScreen()
 {
-    Color colorScheme;
+    Color &colorScheme = Color::getInstance();
     EventManager &eventManager = EventManager::getInstance();
+    Admission &a = Admission::getInstance();
 
     renderHeader();
     renderControlInfo();

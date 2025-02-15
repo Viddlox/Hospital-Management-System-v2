@@ -45,3 +45,65 @@ std::string toLower(const std::string &s)
     std::transform(lowerStr.begin(), lowerStr.end(), lowerStr.begin(), ::tolower);
     return lowerStr;
 }
+
+char *trim_whitespaces(char *str)
+{
+    char *end;
+
+    // trim leading space
+    while (isspace(*str))
+        str++;
+
+    if (*str == 0) // all spaces?
+        return str;
+
+    // trim trailing space
+    end = str + strnlen(str, 128) - 1;
+
+    while (end > str && isspace(*end))
+        end--;
+
+    // write new null terminator
+    *(end + 1) = '\0';
+
+    return str;
+}
+
+int calculateAge(const std::string &identityCardNumber)
+{
+    // Extract year, month, and day
+    int year = std::stoi(identityCardNumber.substr(0, 2));
+    int month = std::stoi(identityCardNumber.substr(2, 2));
+    int day = std::stoi(identityCardNumber.substr(4, 2));
+
+    // Get the current date
+    time_t now = time(0);
+    tm *localTime = localtime(&now);
+    int currentYear = 1900 + localTime->tm_year;
+    int currentMonth = 1 + localTime->tm_mon;
+    int currentDay = localTime->tm_mday;
+
+    // Determine the full year (assuming IC numbers use 1900s and 2000s)
+    if (year >= 0 && year <= 24)
+    { // Adjust based on reasonable birth years
+        year += 2000;
+    }
+    else
+    {
+        year += 1900;
+    }
+
+    // Calculate age
+    int age = currentYear - year;
+    if (currentMonth < month || (currentMonth == month && currentDay < day))
+    {
+        age--; // Adjust if birthday hasn't occurred yet this year
+    }
+
+    return age;
+}
+
+double calculateBMI(const std::string &weight, const std::string &height)
+{
+    return std::stod(weight) / pow((std::stod(height) / 100.0), 2);
+}
