@@ -43,7 +43,9 @@ class Patient;
 enum class Screen
 {
     Login,
-    RegisterPatient,
+    RegistrationAccountPatientScreen,
+    RegistrationPersonalPatientScreen,
+    RegistrationSelectionPatientScreen,
     RegisterAdmin,
     Dashboard,
     Profile,
@@ -92,7 +94,7 @@ struct Controls
 struct Profile
 {
     std::shared_ptr<User> user;
-    Screen prevScreen = Screen::Dashboard;
+    Screen prevScreen;
 
     std::vector<std::string> patientSubheaderArr = {
         "Account Information",
@@ -113,7 +115,6 @@ struct Profile
 
     void reset()
     {
-        prevScreen = Screen::Dashboard;
         currentPage = 0;
         searchQuery.clear();
         selectedRow = -1;
@@ -332,15 +333,6 @@ struct RegistrationPatient
         maritalStatusArr,
         nationalityArr};
 
-    enum class Section
-    {
-        account,
-        personal,
-        selection
-    };
-
-    Section currentSection = Section::account;
-
     // account information
     std::string username = "";
     std::string password = "";
@@ -366,7 +358,6 @@ struct RegistrationPatient
     int currentMenu = 0;
     void reset()
     {
-        currentSection = Section::account;
         username = "";
         password = "";
         email = "";
@@ -530,13 +521,10 @@ void initializeColors();
 void clearScrollbackBuffer();
 void renderControlInfo();
 void renderRegistrationScreenAdmin();
-void renderRegistrationScreenPatient();
-void renderRegistrationAccountSectionPatient();
-void renderRegistrationPersonalSectionPatient();
-void renderRegistrationSelectionSectionPatient();
-void backHandlerRegistrationPatient(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body);
-void backHandlerRegistrationAdmin(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body);
-void backHandlerRegistrationProfile(WINDOW *win_form, WINDOW *win_body);
+void renderRegistrationAccountPatientScreen();
+void renderRegistrationPersonalPatientScreen();
+void renderRegistrationSelectionPatientScreen();
+void backHandler(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body, Screen prevScreen);
 void exitHandler();
 void renderHorizontalMenuStack(WINDOW *win, const std::vector<std::string> &items, const std::string &title, int y_offset, int &selected_index, int start_x);
 bool validateFields(FIELD **fields);

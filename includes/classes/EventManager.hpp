@@ -41,9 +41,18 @@ private:
             renderDashboardScreen();
             wrefresh(stdscr);
             break;
-        case Screen::RegisterPatient:
+        case Screen::RegistrationAccountPatientScreen:
             curs_set(1);
-            renderRegistrationScreenPatient();
+            renderRegistrationAccountPatientScreen();
+            wrefresh(stdscr);
+            break;
+        case Screen::RegistrationPersonalPatientScreen:
+            curs_set(1);
+            renderRegistrationPersonalPatientScreen();
+            wrefresh(stdscr);
+            break;
+        case Screen::RegistrationSelectionPatientScreen:
+            renderRegistrationSelectionPatientScreen();
             wrefresh(stdscr);
             break;
         case Screen::RegisterAdmin:

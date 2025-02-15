@@ -205,15 +205,6 @@ void renderLoginScreen()
         case 27:
             eventManager.exit();
             break;
-        case 18:
-            unpost_form(form);
-            free_form(form);
-            for (int i = 0; fields[i]; ++i)
-                free_field(fields[i]);
-            delwin(win_form);
-            delwin(win_body);
-            eventManager.switchScreen(Screen::RegisterPatient);
-            return;
         case KEY_DC:
             form_driver(form, REQ_DEL_CHAR);
             break;
@@ -313,11 +304,9 @@ void exitHandler()
     EventManager &eventManager = EventManager::getInstance();
     eventManager.exit();
 }
-void backHandlerRegistrationPatient(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body)
+void backHandler(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body, Screen prevScreen)
 {
     EventManager &eventManager = EventManager::getInstance();
-    RegistrationPatient &reg = RegistrationPatient::getInstance();
-    RegistrationPatient::Section section = reg.currentSection;
 
     if (form)
     {
@@ -337,22 +326,7 @@ void backHandlerRegistrationPatient(FORM *form, FIELD **fields, WINDOW *win_form
     delwin(win_body);
     clear();
     refresh();
-
-    switch (section)
-    {
-    case RegistrationPatient::Section::selection:
-        renderRegistrationPersonalSectionPatient();
-        break;
-    case RegistrationPatient::Section::personal:
-        renderRegistrationAccountSectionPatient();
-        break;
-    case RegistrationPatient::Section::account:
-        reg.reset();
-        eventManager.switchScreen(Screen::Database);
-        break;
-    default:
-        break;
-    }
+    eventManager.switchScreen(prevScreen);
 }
 
 void driver_form(int ch, FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body,
@@ -417,7 +391,7 @@ bool validateFields(FIELD **fields)
     return true;
 }
 
-void renderRegistrationAccountSectionPatient()
+void renderRegistrationAccountPatientScreen()
 {
     renderHeader();
     renderControlInfo();
@@ -429,7 +403,6 @@ void renderRegistrationAccountSectionPatient()
     std::string header = "Register a MedTek+ Patient Account";
     mvprintw(baseline, (COLS - header.length()) / 2, "%s", header.c_str());
 
-    reg.currentSection = RegistrationPatient::Section::account;
     bkgd(COLOR_PAIR(colorScheme.primary));
 
     int outer_height = 16;
@@ -530,7 +503,7 @@ void renderRegistrationAccountSectionPatient()
                 [&]()
                 { exitHandler(); },
                 [&]()
-                { backHandlerRegistrationPatient(form, fields, win_form, win_body); });
+                { backHandler(form, fields, win_form, win_body, Screen::Database); });
         }
         form_driver(form, REQ_VALIDATION);
         if (!validateFields(fields))
@@ -571,10 +544,11 @@ void renderRegistrationAccountSectionPatient()
     clear();
     refresh();
 
-    renderRegistrationPersonalSectionPatient();
+    EventManager &eventManager = EventManager::getInstance();
+    eventManager.switchScreen(Screen::RegistrationPersonalPatientScreen);
 }
 
-void renderRegistrationPersonalSectionPatient()
+void renderRegistrationPersonalPatientScreen()
 {
     renderHeader();
     renderControlInfo();
@@ -585,7 +559,6 @@ void renderRegistrationPersonalSectionPatient()
     std::string header = "Register a MedTek+ Patient Account";
     mvprintw(baseline, (COLS - header.length()) / 2, "%s", header.c_str());
 
-    reg.currentSection = RegistrationPatient::Section::personal;
     bkgd(COLOR_PAIR(colorScheme.primary));
 
     int outer_height = 20;
@@ -690,7 +663,7 @@ void renderRegistrationPersonalSectionPatient()
                 [&]()
                 { exitHandler(); },
                 [&]()
-                { backHandlerRegistrationPatient(form, fields, win_form, win_body); });
+                { backHandler(form, fields, win_form, win_body, Screen::RegistrationAccountPatientScreen); });
         }
         form_driver(form, REQ_VALIDATION);
         if (!validateFields(fields))
@@ -732,7 +705,8 @@ void renderRegistrationPersonalSectionPatient()
     clear();
     refresh();
 
-    renderRegistrationSelectionSectionPatient();
+    EventManager &eventManager = EventManager::getInstance();
+    eventManager.switchScreen(Screen::RegistrationSelectionPatientScreen);
 }
 
 // Function to render a custom menu
@@ -762,13 +736,14 @@ void renderHorizontalMenuStack(WINDOW *win, const std::vector<std::string> &item
 bool submitRegistrationPatient()
 {
     RegistrationPatient &reg = RegistrationPatient::getInstance();
+    Admission &a = Admission::getInstance();
     try
     {
         UserManager &userManager = UserManager::getInstance();
         userManager.createPatient(reg.username, reg.password, calculateAge(reg.identityCardNumber), reg.fullName,
                                   reg.religion, reg.nationality, reg.identityCardNumber, reg.maritalStatus,
                                   reg.gender, reg.race, reg.email, reg.contactNumber, reg.emergencyContactNumber,
-                                  reg.emergencyContactName, reg.address, calculateBMI(reg.weight, reg.height), reg.height, reg.weight, Admissions::Department::Surgery);
+                                  reg.emergencyContactName, reg.address, calculateBMI(reg.weight, reg.height), reg.height, reg.weight, a.selectedDepartment);
         return true;
     }
     catch (const std::exception &e)
@@ -778,13 +753,12 @@ bool submitRegistrationPatient()
     return false;
 }
 
-void renderRegistrationSelectionSectionPatient()
+void renderRegistrationSelectionPatientScreen()
 {
     Color &colorScheme = Color::getInstance();
     RegistrationPatient &reg = RegistrationPatient::getInstance();
     renderHeader();
     renderControlInfo();
-    reg.currentSection = RegistrationPatient::Section::selection;
 
     bkgd(COLOR_PAIR(colorScheme.primary));
 
@@ -887,7 +861,7 @@ void renderRegistrationSelectionSectionPatient()
             done = true;
             break;
         case 2: // Custom key for "Back"
-            backHandlerRegistrationPatient(nullptr, nullptr, win_form, win_body);
+            backHandler(nullptr, nullptr, win_form, win_body, Screen::RegistrationPersonalPatientScreen);
             break;
         }
     }
@@ -900,7 +874,8 @@ void renderRegistrationSelectionSectionPatient()
         std::this_thread::sleep_for(std::chrono::seconds(2));
         werase(status_win);
         wrefresh(status_win);
-        backHandlerRegistrationPatient(nullptr, nullptr, win_form, win_body);
+        reg.reset();
+        backHandler(nullptr, nullptr, win_form, win_body, Screen::Database);
     }
     else
     {
@@ -911,13 +886,6 @@ void renderRegistrationSelectionSectionPatient()
         werase(status_win);
         wrefresh(status_win);
     }
-}
-
-void renderRegistrationScreenPatient()
-{
-    Color &colorScheme = Color::getInstance();
-    bkgd(COLOR_PAIR(colorScheme.primary));
-    renderRegistrationAccountSectionPatient();
 }
 
 bool submitRegistrationAdmin(RegistrationAdmin &reg)
@@ -933,34 +901,6 @@ bool submitRegistrationAdmin(RegistrationAdmin &reg)
         return false;
     }
     return false;
-}
-
-void backHandlerRegistrationAdmin(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body)
-{
-    EventManager &eventManager = EventManager::getInstance();
-    RegistrationAdmin &reg = RegistrationAdmin::getInstance();
-
-    if (form)
-    {
-        unpost_form(form);
-        free_form(form);
-    }
-    if (fields)
-    {
-        for (int i = 0; fields[i]; i++)
-        {
-            free_field(fields[i]);
-        }
-    }
-    wclear(win_form);
-    wclear(win_body);
-    delwin(win_form);
-    delwin(win_body);
-    clear();
-    refresh();
-
-    reg.reset();
-    eventManager.switchScreen(Screen::Database);
 }
 
 void renderRegistrationScreenAdmin()
@@ -1085,7 +1025,8 @@ void renderRegistrationScreenAdmin()
                 [&]()
                 { exitHandler(); },
                 [&]()
-                { backHandlerRegistrationAdmin(form, fields, win_form, win_body); });
+                {   reg.reset();
+                    backHandler(form, fields, win_form, win_body, Screen::Database); });
         }
         form_driver(form, REQ_VALIDATION);
         if (!validateFields(fields))
@@ -1119,7 +1060,8 @@ void renderRegistrationScreenAdmin()
         std::this_thread::sleep_for(std::chrono::seconds(3));
         werase(status_win);
         wrefresh(status_win);
-        backHandlerRegistrationAdmin(form, fields, win_form, win_body);
+        reg.reset();
+        backHandler(form, fields, win_form, win_body, Screen::Database);
     }
     else
     {
@@ -1552,23 +1494,13 @@ void renderDatabaseScreen()
     switch (ch)
     {
     case '+':
-        db.currentFilter == Database::Filter::patient ? eventManager.switchScreen(Screen::RegisterPatient) : eventManager.switchScreen(Screen::RegisterAdmin);
+        db.currentFilter == Database::Filter::patient ? eventManager.switchScreen(Screen::RegistrationAccountPatientScreen) : eventManager.switchScreen(Screen::RegisterAdmin);
         break;
     default:
         db.reset();
         eventManager.switchScreen(Screen::Dashboard);
         break;
     }
-}
-
-void backHandlerRegistrationProfile(WINDOW *win_form, WINDOW *win_body)
-{
-    delwin(win_form);
-    delwin(win_body);
-    EventManager &eventManager = EventManager::getInstance();
-    Profile &p = Profile::getInstance();
-    eventManager.switchScreen(p.prevScreen);
-    p.reset();
 }
 
 void renderProfileAdmissionsScreen()
@@ -1826,7 +1758,8 @@ void renderProfileScreen()
             switch (ch)
             {
             case 2:
-                backHandlerRegistrationProfile(win_form, win_body);
+                p.reset();
+                backHandler(nullptr, nullptr, win_form, win_body, p.prevScreen);
                 return;
             case 27:
                 exitHandler();
@@ -1896,7 +1829,8 @@ void renderProfileScreen()
             ch = getch();
             if (ch == 2)
             {
-                backHandlerRegistrationProfile(win_form, win_body);
+                p.reset();
+                backHandler(nullptr, nullptr, win_form, win_body, p.prevScreen);
                 break;
             }
             else if (ch == 27)
