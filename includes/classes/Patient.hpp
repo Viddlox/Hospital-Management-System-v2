@@ -59,6 +59,25 @@ public:
     {
         std::string dateTime = formatTimestamp(std::chrono::system_clock::now());
         admissions[dept].push_back(dateTime);
+        saveToFile();
+    }
+
+    void deleteAdmission(Admissions::Department dept, const std::string &dateTime)
+    {
+        auto &dates = admissions[dept];
+
+        auto it = std::find(dates.begin(), dates.end(), dateTime); 
+        if (it != dates.end())
+        {
+            dates.erase(it);
+
+            // If no more admissions remain for this department, remove the department from the map
+            if (dates.empty())
+            {
+                admissions.erase(dept);
+            }
+            saveToFile();
+        }
     }
 
     // 🔹 Friend functions for JSON serialization/deserialization

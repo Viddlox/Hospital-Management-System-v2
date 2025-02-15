@@ -706,7 +706,9 @@ void renderRegistrationPersonalPatientScreen()
     refresh();
 
     EventManager &eventManager = EventManager::getInstance();
-    eventManager.switchScreen(Screen::RegistrationSelectionPatientScreen);
+    Admission &a = Admission::getInstance();
+    a.prevScreen = Screen::RegistrationSelectionPatientScreen;
+    eventManager.switchScreen(Screen::Admission);
 }
 
 // Function to render a custom menu
@@ -865,7 +867,6 @@ void renderRegistrationSelectionPatientScreen()
             break;
         }
     }
-
     if (submitRegistrationPatient())
     {
         wbkgd(status_win, COLOR_PAIR(colorScheme.primary));
@@ -1549,6 +1550,11 @@ void renderProfileAdmissionsScreen()
     keypad(win_form, TRUE);
     curs_set(0);
 
+    p.generateListMatrix(p.search(p.searchQuery, patient->admissions));
+    p.listMatrix = p.getCurrentPage();
+
+    int ch;
+
     while (!done)
     {
         // Render subheader (Patient Records / Admin Records)
@@ -1613,7 +1619,7 @@ void renderProfileAdmissionsScreen()
 
         wrefresh(win_form);
 
-        int ch = wgetch(win_form);
+        ch = wgetch(win_form);
 
         if (p.selectedRow == -1)
         {
@@ -1628,7 +1634,7 @@ void renderProfileAdmissionsScreen()
                 p.searchQuery += static_cast<char>(ch);
             }
             // Regenerate list dynamically
-            p.generateListMatrix(patient->admissions);
+            p.generateListMatrix(p.search(p.searchQuery, patient->admissions));
             p.listMatrix = p.getCurrentPage();
         }
 
@@ -1636,7 +1642,22 @@ void renderProfileAdmissionsScreen()
 
         switch (ch)
         {
+        case '+':
+            done = true;
+            break;
         case '\n':
+            patient->deleteAdmission(Admissions::stringToDepartment(p.listMatrix[p.selectedRow][0]), p.listMatrix[p.selectedRow][1]);
+            p.generateListMatrix(p.search(p.searchQuery, patient->admissions));
+            p.listMatrix = p.getCurrentPage();
+            while (p.listMatrix.empty() && p.currentPage > 0)
+            {
+                p.currentPage--;
+                p.listMatrix = p.getCurrentPage();
+            }
+            if (p.selectedRow >= static_cast<int>(p.listMatrix.size()))
+            {
+                p.selectedRow = std::max(0, static_cast<int>(p.listMatrix.size()) - 1);
+            }
             break;
         case KEY_DOWN:
             if (p.selectedRow < static_cast<int>(p.listMatrix.size() - 1))
@@ -1653,6 +1674,7 @@ void renderProfileAdmissionsScreen()
             if (p.currentPage > 0)
             {
                 p.currentPage--;
+                p.generateListMatrix(p.search(p.searchQuery, patient->admissions));
                 p.listMatrix = p.getCurrentPage();
             }
             break;
@@ -1660,6 +1682,7 @@ void renderProfileAdmissionsScreen()
             if (p.currentPage + 1 < p.totalPages)
             {
                 p.currentPage++;
+                p.generateListMatrix(p.search(p.searchQuery, patient->admissions));
                 p.listMatrix = p.getCurrentPage();
             }
             break;
@@ -1677,7 +1700,16 @@ void renderProfileAdmissionsScreen()
     delwin(win_form);
     delwin(win_body);
     p.reset();
-    eventManager.switchScreen(Screen::Profile);
+    if (ch == '+')
+    {
+        Admission &a = Admission::getInstance();
+        a.prevScreen = Screen::ProfileAdmissions;
+        eventManager.switchScreen(Screen::Admission);
+    }
+    else
+    {
+        eventManager.switchScreen(Screen::Profile);
+    }
 }
 
 void renderProfileScreen()
@@ -1854,10 +1886,6 @@ void renderAdmissionScreen()
     renderHeader();
     renderControlInfo();
 
-    a.currentPage = 0;
-    a.searchQuery.clear();
-    a.list = a.getCurrentPage();
-
     std::string header = "Admission";
     attron(A_BOLD);
     mvprintw(11, (COLS - header.length()) / 2, "%s", header.c_str());
@@ -1887,6 +1915,10 @@ void renderAdmissionScreen()
 
     keypad(win_form, TRUE);
     curs_set(0);
+    int ch;
+
+    a.generateList(a.search(a.searchQuery));
+    a.list = a.getCurrentPage();
 
     while (!done)
     {
@@ -1940,7 +1972,7 @@ void renderAdmissionScreen()
 
         wrefresh(win_form);
 
-        int ch = wgetch(win_form);
+        ch = wgetch(win_form);
 
         if (a.selectedRow == -1)
         {
@@ -1985,6 +2017,7 @@ void renderAdmissionScreen()
             if (a.currentPage > 0)
             {
                 a.currentPage--;
+                a.generateList(a.search(a.searchQuery)); // Ensure list is refreshed
                 a.list = a.getCurrentPage();
             }
             break;
@@ -1992,6 +2025,7 @@ void renderAdmissionScreen()
             if (a.currentPage + 1 < a.totalPages)
             {
                 a.currentPage++;
+                a.generateList(a.search(a.searchQuery)); // Ensure list is refreshed
                 a.list = a.getCurrentPage();
             }
             break;
@@ -2008,6 +2042,12 @@ void renderAdmissionScreen()
     wclear(win_body);
     delwin(win_form);
     delwin(win_body);
+    if (a.prevScreen == Screen::ProfileAdmissions)
+    {
+        Profile &p = Profile::getInstance();
+        auto patient = std::dynamic_pointer_cast<Patient>(p.user);
+        patient->addAdmission(a.selectedDepartment);
+    }
     a.reset();
     eventManager.switchScreen(a.prevScreen);
 }

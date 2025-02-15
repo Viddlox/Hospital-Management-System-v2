@@ -129,8 +129,8 @@ struct Profile
         {
             for (const auto &dateTime : record.second) // Iterate over admission dates
             {
-                listMatrix.push_back({"Department: " + Admissions::departmentToString(record.first),
-                                      "Date: " + dateTime,
+                listMatrix.push_back({Admissions::departmentToString(record.first),
+                                      dateTime,
                                       "[Delete]"});
             }
         }
@@ -146,6 +146,38 @@ struct Profile
         for (int i = startIndex; i < endIndex; i++)
         {
             res.push_back(listMatrix[i]);
+        }
+        return res;
+    }
+
+    std::map<Admissions::Department, std::vector<std::string>> search(const std::string &query, const std::map<Admissions::Department, std::vector<std::string>> &records)
+    {
+        std::string filteredQuery = query.empty() ? "" : toLower(trim(query));
+        std::map<Admissions::Department, std::vector<std::string>> res;
+
+        for (const auto &record : records)
+        {
+            std::vector<std::string> matchedDates;
+
+            if (filteredQuery.empty() || toLower(Admissions::departmentToString(record.first)).find(filteredQuery) != std::string::npos)
+            {
+                matchedDates = record.second;
+            }
+            else
+            {
+                for (const auto &dateTime : record.second)
+                {
+                    if (toLower(dateTime).find(filteredQuery) != std::string::npos)
+                    {
+                        matchedDates.push_back(dateTime);
+                    }
+                }
+            }
+
+            if (!matchedDates.empty())
+            {
+                res[record.first] = matchedDates;
+            }
         }
         return res;
     }
