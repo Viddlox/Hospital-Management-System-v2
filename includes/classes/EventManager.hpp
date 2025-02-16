@@ -145,7 +145,7 @@ public:
         {
             for (int i = 1; i < 31; i++)
                 userManager.createAdmin("admin" + std::to_string(i), "1234",
-                                        "Michael Cheng" + std::to_string(i), "nigga@gmail.com", "0123917125");
+                                        "Michael Cheng" + std::to_string(i), "lol@gmail.com", "0123917125");
         }
         if (userManager.getPatientCount() < 1)
         {
