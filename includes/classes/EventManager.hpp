@@ -77,6 +77,25 @@ private:
             renderAdmissionScreen();
             wrefresh(stdscr);
             break;
+        case Screen::UpdateAccountPatientScreen:
+            curs_set(1);
+            renderUpdateAccountPatientScreen();
+            wrefresh(stdscr);
+            break;
+        case Screen::UpdatePersonalPatientScreen:
+            curs_set(1);
+            renderUpdatePersonalPatientScreen();
+            wrefresh(stdscr);
+            break;
+        case Screen::UpdateSelectionPatientScreen:
+            renderUpdateSelectionPatientScreen();
+            wrefresh(stdscr);
+            break;
+        case Screen::UpdateAdminScreen:
+            curs_set(1);
+            renderUpdateAdminScreen();
+            wrefresh(stdscr);
+            break;
         default:
             break;
         }

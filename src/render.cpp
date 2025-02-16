@@ -304,7 +304,7 @@ void exitHandler()
     EventManager &eventManager = EventManager::getInstance();
     eventManager.exit();
 }
-void backHandler(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body, Screen prevScreen)
+void navigationHandler(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body, Screen screen)
 {
     EventManager &eventManager = EventManager::getInstance();
 
@@ -326,11 +326,11 @@ void backHandler(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body,
     delwin(win_body);
     clear();
     refresh();
-    eventManager.switchScreen(prevScreen);
+    eventManager.switchScreen(screen);
 }
 
 void driver_form(int ch, FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body,
-                 std::function<void()> exitHandler, std::function<void()> backHandler)
+                 std::function<void()> exitHandler, std::function<void()> navigationHandler)
 {
     switch (ch)
     {
@@ -359,9 +359,9 @@ void driver_form(int ch, FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *w
         }
         break;
     case 2: // Custom key for "Back"
-        if (backHandler)
+        if (navigationHandler)
         {
-            backHandler();
+            navigationHandler();
         }
         return;
     case KEY_DC:
@@ -503,7 +503,8 @@ void renderRegistrationAccountPatientScreen()
                 [&]()
                 { exitHandler(); },
                 [&]()
-                { backHandler(form, fields, win_form, win_body, Screen::Database); });
+                {   reg.reset();
+                    navigationHandler(form, fields, win_form, win_body, Screen::Database); });
         }
         form_driver(form, REQ_VALIDATION);
         if (!validateFields(fields))
@@ -584,8 +585,8 @@ void renderRegistrationPersonalPatientScreen()
     FIELD *fields[13];
     fields[0] = new_field(1, 15, 0, 1, 0, 0);    // Label: fullName
     fields[1] = new_field(1, 35, 0, 18, 0, 0);   // Input: fullName
-    fields[2] = new_field(1, 15, 2, 1, 0, 0);    // Label: identityCardNumber
-    fields[3] = new_field(1, 35, 2, 18, 0, 0);   // Input: identityCardNumber
+    fields[2] = new_field(1, 32, 2, 1, 0, 0);    // Label: identityCardNumber
+    fields[3] = new_field(1, 18, 2, 34, 0, 0);   // Input: identityCardNumber
     fields[4] = new_field(1, 15, 4, 1, 0, 0);    // Label: height
     fields[5] = new_field(1, 35, 4, 18, 0, 0);   // Input: height
     fields[6] = new_field(1, 15, 6, 1, 0, 0);    // Label: weight
@@ -601,7 +602,7 @@ void renderRegistrationPersonalPatientScreen()
 
     set_field_buffer(fields[0], 0, "Full Name:");
     set_field_buffer(fields[1], 0, reg.fullName.c_str());
-    set_field_buffer(fields[2], 0, "IC number:");
+    set_field_buffer(fields[2], 0, "IC number (e.g. 010403141107):");
     set_field_buffer(fields[3], 0, reg.identityCardNumber.c_str());
     set_field_buffer(fields[4], 0, "Height (cm):");
     set_field_buffer(fields[5], 0, reg.height.c_str());
@@ -663,7 +664,7 @@ void renderRegistrationPersonalPatientScreen()
                 [&]()
                 { exitHandler(); },
                 [&]()
-                { backHandler(form, fields, win_form, win_body, Screen::RegistrationAccountPatientScreen); });
+                { navigationHandler(form, fields, win_form, win_body, Screen::RegistrationAccountPatientScreen); });
         }
         form_driver(form, REQ_VALIDATION);
         if (!validateFields(fields))
@@ -863,7 +864,7 @@ void renderRegistrationSelectionPatientScreen()
             done = true;
             break;
         case 2: // Custom key for "Back"
-            backHandler(nullptr, nullptr, win_form, win_body, Screen::RegistrationPersonalPatientScreen);
+            navigationHandler(nullptr, nullptr, win_form, win_body, Screen::RegistrationPersonalPatientScreen);
             break;
         }
     }
@@ -876,7 +877,7 @@ void renderRegistrationSelectionPatientScreen()
         werase(status_win);
         wrefresh(status_win);
         reg.reset();
-        backHandler(nullptr, nullptr, win_form, win_body, Screen::Database);
+        navigationHandler(nullptr, nullptr, win_form, win_body, Screen::Database);
     }
     else
     {
@@ -1027,7 +1028,7 @@ void renderRegistrationScreenAdmin()
                 { exitHandler(); },
                 [&]()
                 {   reg.reset();
-                    backHandler(form, fields, win_form, win_body, Screen::Database); });
+                    navigationHandler(form, fields, win_form, win_body, Screen::Database); });
         }
         form_driver(form, REQ_VALIDATION);
         if (!validateFields(fields))
@@ -1062,7 +1063,7 @@ void renderRegistrationScreenAdmin()
         werase(status_win);
         wrefresh(status_win);
         reg.reset();
-        backHandler(form, fields, win_form, win_body, Screen::Database);
+        navigationHandler(form, fields, win_form, win_body, Screen::Database);
     }
     else
     {
@@ -1231,6 +1232,8 @@ void handleDatabaseControls(WINDOW *win_form, WINDOW *win_body)
     EventManager &eventManager = EventManager::getInstance();
     Profile &p = Profile::getInstance();
     Database &db = Database::getInstance();
+    UpdatePatient &up = UpdatePatient::getInstance();
+    UpdateAdmin &ua = UpdateAdmin::getInstance();
 
     if (db.listMatrixCurrent.empty())
         return;
@@ -1244,6 +1247,25 @@ void handleDatabaseControls(WINDOW *win_form, WINDOW *win_body)
         p.user = userManager.getUserById(db.listMatrixCurrent[db.selectedRow][db.listMatrixCurrent[db.selectedRow].size() - 1]);
         p.prevScreen = Screen::Database;
         eventManager.switchScreen(Screen::Profile);
+        break;
+    case 2:
+        wclear(win_form);
+        wclear(win_body);
+        delwin(win_form);
+        delwin(win_body);
+        if (db.currentFilter == Database::Filter::patient)
+        {
+            up.user = userManager.getUserById(db.listMatrixCurrent[db.selectedRow][db.listMatrixCurrent[db.selectedRow].size() - 1]);
+            up.populateValues(std::dynamic_pointer_cast<Patient>(up.user));
+            eventManager.switchScreen(Screen::UpdateAccountPatientScreen);
+        }
+        else
+        {
+            ua.user = userManager.getUserById(db.listMatrixCurrent[db.selectedRow][db.listMatrixCurrent[db.selectedRow].size() - 1]);
+            ua.populateValues(std::dynamic_pointer_cast<Admin>(ua.user));
+            eventManager.switchScreen(Screen::UpdateAdminScreen);
+        }
+        break;
     case 3:
         userManager.deleteUserById(db.listMatrixCurrent[db.selectedRow][db.listMatrixCurrent[db.selectedRow].size() - 1]);
 
@@ -1321,7 +1343,7 @@ void renderDatabaseScreen()
 
     db.generateListMatrixPatient(db.patientRecords);
     db.generateListMatrixAdmin(db.adminRecords);
-    db.listMatrixCurrent = db.getCurrentPagePatient(); // Initialize with first page of patient records
+    db.listMatrixCurrent = db.currentFilter == Database::Filter::patient ? db.getCurrentPagePatient() : db.getCurrentPageAdmin();
     bool done = false;
 
     keypad(win_form, TRUE);
@@ -1515,11 +1537,6 @@ void renderProfileAdmissionsScreen()
 
     auto patient = std::dynamic_pointer_cast<Patient>(p.user);
 
-    p.currentPage = 0;
-    p.searchQuery.clear();
-    p.generateListMatrix(patient->admissions);
-    p.listMatrix = p.getCurrentPage();
-
     std::string header = "Viewing " + patient->fullName + "'s admissions";
     attron(A_BOLD);
     mvprintw(11, (COLS - header.length()) / 2, "%s", header.c_str());
@@ -1646,6 +1663,8 @@ void renderProfileAdmissionsScreen()
             done = true;
             break;
         case '\n':
+            if (p.listMatrix.empty())
+                break;
             patient->deleteAdmission(Admissions::stringToDepartment(p.listMatrix[p.selectedRow][0]), p.listMatrix[p.selectedRow][1]);
             p.generateListMatrix(p.search(p.searchQuery, patient->admissions));
             p.listMatrix = p.getCurrentPage();
@@ -1791,7 +1810,7 @@ void renderProfileScreen()
             {
             case 2:
                 p.reset();
-                backHandler(nullptr, nullptr, win_form, win_body, p.prevScreen);
+                navigationHandler(nullptr, nullptr, win_form, win_body, p.prevScreen);
                 return;
             case 27:
                 exitHandler();
@@ -1862,7 +1881,7 @@ void renderProfileScreen()
             if (ch == 2)
             {
                 p.reset();
-                backHandler(nullptr, nullptr, win_form, win_body, p.prevScreen);
+                navigationHandler(nullptr, nullptr, win_form, win_body, p.prevScreen);
                 break;
             }
             else if (ch == 27)
@@ -1996,7 +2015,7 @@ void renderAdmissionScreen()
         switch (ch)
         {
         case '\n':
-            if (a.selectedRow > -1 && a.selectedRow < static_cast<int>(a.list.size() - 1))
+            if (a.selectedRow > -1 && a.selectedRow < static_cast<int>(a.list.size()))
             {
                 a.selectedDepartment = a.list[a.selectedRow].first;
                 done = true;
@@ -2050,4 +2069,621 @@ void renderAdmissionScreen()
     }
     a.reset();
     eventManager.switchScreen(a.prevScreen);
+}
+
+void renderUpdateAccountPatientScreen()
+{
+    renderHeader();
+    renderControlInfo();
+
+    Color &colorScheme = Color::getInstance();
+    UpdatePatient &u = UpdatePatient::getInstance();
+
+    auto patient = std::dynamic_pointer_cast<Patient>(u.user);
+
+    int baseline = 11;
+    std::string header = "Updating " + patient->fullName + "'s account";
+    mvprintw(baseline, (COLS - header.length()) / 2, "%s", header.c_str());
+
+    bkgd(COLOR_PAIR(colorScheme.primary));
+
+    int outer_height = 16;
+    int outer_width = 60;
+
+    int start_y = ((LINES - outer_height) / 2) + 2;
+    int start_x = (COLS - outer_width) / 2;
+
+    WINDOW *win_body = newwin(outer_height, outer_width, start_y, start_x);
+    wbkgd(win_body, COLOR_PAIR(colorScheme.primary));
+    box(win_body, 0, 0);
+
+    std::string subHeader = "Account Information";
+    mvwprintw(win_body, 1, (outer_width - subHeader.length()) / 2, "%s", subHeader.c_str());
+
+    int inner_height = outer_height - 4;
+    int inner_width = outer_width - 4;
+
+    WINDOW *win_form = derwin(win_body, inner_height, inner_width, 2, 2);
+    wbkgd(win_form, COLOR_PAIR(colorScheme.primary));
+    box(win_form, 0, 0);
+
+    FIELD *fields[11];
+    fields[0] = new_field(1, 10, 0, 1, 0, 0);  // Label: Username
+    fields[1] = new_field(1, 30, 0, 13, 0, 0); // Input: Username
+    fields[2] = new_field(1, 10, 2, 1, 0, 0);  // Label: Password
+    fields[3] = new_field(1, 30, 2, 13, 0, 0); // Input: Password
+    fields[4] = new_field(1, 10, 4, 1, 0, 0);  // Label: Email
+    fields[5] = new_field(1, 30, 4, 13, 0, 0); // Input: Email
+    fields[6] = new_field(1, 10, 6, 1, 0, 0);  // Label: Address
+    fields[7] = new_field(1, 30, 6, 13, 0, 0); // Input: Address
+    fields[8] = new_field(1, 16, 8, 1, 0, 0);  // Label: Contact Number
+    fields[9] = new_field(1, 30, 8, 20, 0, 0); // Input: Contact Number
+    fields[10] = NULL;
+
+    assert(fields[0] && fields[1] && fields[2] && fields[3] && fields[4] &&
+           fields[5] && fields[6] && fields[7] && fields[8] && fields[9]);
+
+    set_field_buffer(fields[0], 0, "Username:");
+    set_field_buffer(fields[1], 0, u.fieldValues["username"].second.c_str());
+    set_field_buffer(fields[2], 0, "Password:");
+    set_field_buffer(fields[3], 0, u.fieldValues["password"].second.c_str());
+    set_field_buffer(fields[4], 0, "Email:");
+    set_field_buffer(fields[5], 0, u.fieldValues["email"].second.c_str());
+    set_field_buffer(fields[6], 0, "Address:");
+    set_field_buffer(fields[7], 0, u.fieldValues["address"].second.c_str());
+    set_field_buffer(fields[8], 0, "Contact Number:");
+    set_field_buffer(fields[9], 0, u.fieldValues["contactNumber"].second.c_str());
+
+    // Set field options
+    for (int i = 0; fields[i]; i++)
+    {
+        if (i % 2 == 0)
+        {                                                               // Labels
+            set_field_opts(fields[i], O_VISIBLE | O_PUBLIC | O_STATIC); // Read-only
+        }
+        else
+        { // Input fields
+            set_field_opts(fields[i], O_VISIBLE | O_PUBLIC | O_EDIT | O_ACTIVE | O_AUTOSKIP);
+        }
+        set_field_back(fields[i], COLOR_PAIR(colorScheme.primary)); // Set background color
+    }
+
+    // Create and post form
+    FORM *form = new_form(fields);
+    assert(form);
+    set_form_win(form, win_form);
+    set_form_sub(form, derwin(win_form, inner_height - 2, inner_width - 2, 1, 1));
+    post_form(form);
+
+    // Refresh windows
+    wrefresh(win_body);
+    wrefresh(win_form);
+
+    // Create a dedicated error window
+    int error_win_height = 1;
+    int error_win_width = 32;
+    int error_win_y = LINES - 2;
+    int error_win_x = (COLS - error_win_width) / 2;
+
+    WINDOW *error_win = newwin(error_win_height, error_win_width, error_win_y, error_win_x);
+    wbkgd(error_win, COLOR_PAIR(colorScheme.danger));
+
+    // Input loop
+    bool done = false;
+    int ch;
+
+    while (!done)
+    {
+        while ((ch = getch()) != '\n')
+        {
+            driver_form(
+                ch,
+                form,
+                fields,
+                win_form,
+                win_body,
+                [&]()
+                { exitHandler(); },
+                [&]()
+                { u.reset();
+                    navigationHandler(form, fields, win_form, win_body, Screen::Database); });
+        }
+        form_driver(form, REQ_VALIDATION);
+        if (!validateFields(fields))
+        {
+            mvwprintw(error_win, 0, 0, "Please fill all required fields");
+            wrefresh(error_win);
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+            werase(error_win);
+            wrefresh(error_win);
+        }
+        else
+        {
+            done = true;
+        }
+    }
+
+    form_driver(form, REQ_VALIDATION);
+
+    // Extract form data
+    u.fieldValues["username"].second = trim_whitespaces(field_buffer(fields[1], 0));
+    u.fieldValues["password"].second = trim_whitespaces(field_buffer(fields[3], 0));
+    u.fieldValues["email"].second = trim_whitespaces(field_buffer(fields[5], 0));
+    u.fieldValues["address"].second = trim_whitespaces(field_buffer(fields[7], 0));
+    u.fieldValues["contactNumber"].second = trim_whitespaces(field_buffer(fields[9], 0));
+
+    // Clean up
+    unpost_form(form);
+    free_form(form);
+    for (int i = 0; fields[i]; i++)
+    {
+        free_field(fields[i]);
+    }
+    wclear(win_form);
+    wclear(win_body);
+    delwin(win_form);
+    delwin(win_body);
+    delwin(error_win);
+    clear();
+    refresh();
+
+    EventManager &eventManager = EventManager::getInstance();
+    eventManager.switchScreen(Screen::UpdatePersonalPatientScreen);
+}
+
+void renderUpdatePersonalPatientScreen()
+{
+    renderHeader();
+    renderControlInfo();
+
+    Color &colorScheme = Color::getInstance();
+    // Were using registration variables here
+    UpdatePatient &u = UpdatePatient::getInstance();
+
+    auto patient = std::dynamic_pointer_cast<Patient>(u.user);
+
+    int baseline = 11;
+    std::string header = "Updating " + patient->fullName + "'s account";
+    mvprintw(baseline, (COLS - header.length()) / 2, "%s", header.c_str());
+
+    bkgd(COLOR_PAIR(colorScheme.primary));
+
+    int outer_height = 20;
+    int outer_width = 60;
+
+    int start_y = ((LINES - outer_height) / 2) + 4;
+    int start_x = (COLS - outer_width) / 2;
+
+    WINDOW *win_body = newwin(outer_height, outer_width, start_y, start_x);
+    wbkgd(win_body, COLOR_PAIR(colorScheme.primary));
+    box(win_body, 0, 0);
+
+    std::string subHeader = "Personal Information";
+    mvwprintw(win_body, 1, (outer_width - subHeader.length()) / 2, "%s", subHeader.c_str());
+
+    int inner_height = outer_height - 4;
+    int inner_width = outer_width - 4;
+
+    WINDOW *win_form = derwin(win_body, inner_height, inner_width, 2, 2);
+    wbkgd(win_form, COLOR_PAIR(colorScheme.primary));
+    box(win_form, 0, 0);
+
+    FIELD *fields[13];
+    fields[0] = new_field(1, 15, 0, 1, 0, 0);    // Label: fullName
+    fields[1] = new_field(1, 35, 0, 18, 0, 0);   // Input: fullName
+    fields[2] = new_field(1, 32, 2, 1, 0, 0);    // Label: identityCardNumber
+    fields[3] = new_field(1, 18, 2, 34, 0, 0);   // Input: identityCardNumber
+    fields[4] = new_field(1, 15, 4, 1, 0, 0);    // Label: height
+    fields[5] = new_field(1, 35, 4, 18, 0, 0);   // Input: height
+    fields[6] = new_field(1, 15, 6, 1, 0, 0);    // Label: weight
+    fields[7] = new_field(1, 35, 6, 18, 0, 0);   // Input: weight
+    fields[8] = new_field(1, 30, 8, 1, 0, 0);    // Label: emergencyContactNumber
+    fields[9] = new_field(1, 22, 8, 28, 0, 0);   // Input: emergencyContactNumber
+    fields[10] = new_field(1, 28, 10, 1, 0, 0);  // Label: emergencyContactName
+    fields[11] = new_field(1, 22, 10, 28, 0, 0); // Input: emergencyContactName
+    fields[12] = NULL;
+
+    assert(fields[0] && fields[1] && fields[2] && fields[3] && fields[4] &&
+           fields[5] && fields[6] && fields[7] && fields[8] && fields[9] && fields[10] && fields[11]);
+
+    set_field_buffer(fields[0], 0, "Full Name:");
+    set_field_buffer(fields[1], 0, u.fieldValues["fullName"].second.c_str());
+    set_field_buffer(fields[2], 0, "IC number (e.g. 010403141107):");
+    set_field_buffer(fields[3], 0, u.fieldValues["identityCardNumber"].second.c_str());
+    set_field_buffer(fields[4], 0, "Height (cm):");
+    set_field_buffer(fields[5], 0, u.fieldValues["height"].second.c_str());
+    set_field_buffer(fields[6], 0, "Weight (kg):");
+    set_field_buffer(fields[7], 0, u.fieldValues["weight"].second.c_str());
+    set_field_buffer(fields[8], 0, "Emergency Contact Number:");
+    set_field_buffer(fields[9], 0, u.fieldValues["emergencyContactNumber"].second.c_str());
+    set_field_buffer(fields[10], 0, "Emergency Contact Name:");
+    set_field_buffer(fields[11], 0, u.fieldValues["emergencyContactName"].second.c_str());
+
+    // Set field options
+    for (int i = 0; fields[i]; i++)
+    {
+        if (i % 2 == 0) // Labels
+        {
+            set_field_opts(fields[i], O_VISIBLE | O_PUBLIC | O_STATIC); // Read-only
+        }
+        else // Input fields
+        {
+            set_field_opts(fields[i], O_VISIBLE | O_PUBLIC | O_EDIT | O_ACTIVE | O_AUTOSKIP);
+        }
+        set_field_back(fields[i], COLOR_PAIR(colorScheme.primary)); // Set background color
+    }
+
+    // Create and post form
+    FORM *form = new_form(fields);
+    assert(form);
+    set_form_win(form, win_form);
+    set_form_sub(form, derwin(win_form, inner_height - 2, inner_width - 2, 1, 1));
+    post_form(form);
+
+    // Refresh windows
+    wrefresh(win_body);
+    wrefresh(win_form);
+
+    // Create a dedicated error window
+    int error_win_height = 1;
+    int error_win_width = 32;
+    int error_win_y = LINES - 2;
+    int error_win_x = (COLS - error_win_width) / 2;
+
+    WINDOW *error_win = newwin(error_win_height, error_win_width, error_win_y, error_win_x);
+    wbkgd(error_win, COLOR_PAIR(colorScheme.danger));
+
+    // Input loop
+    bool done = false;
+    int ch;
+
+    while (!done)
+    {
+        while ((ch = getch()) != '\n')
+        {
+            driver_form(
+                ch,
+                form,
+                fields,
+                win_form,
+                win_body,
+                [&]()
+                { exitHandler(); },
+                [&]()
+                { navigationHandler(form, fields, win_form, win_body, Screen::UpdateAccountPatientScreen); });
+        }
+        form_driver(form, REQ_VALIDATION);
+        if (!validateFields(fields))
+        {
+            mvwprintw(error_win, 0, 0, "Please fill all required fields");
+            wrefresh(error_win);
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+            werase(error_win);
+            wrefresh(error_win);
+        }
+        else
+        {
+            done = true;
+        }
+    }
+
+    form_driver(form, REQ_VALIDATION);
+
+    // Extract form data
+    u.fieldValues["fullName"].second = trim_whitespaces(field_buffer(fields[1], 0));
+    u.fieldValues["identityCardNumber"].second = trim_whitespaces(field_buffer(fields[3], 0));
+    u.fieldValues["height"].second = trim_whitespaces(field_buffer(fields[5], 0));
+    u.fieldValues["weight"].second = trim_whitespaces(field_buffer(fields[7], 0));
+    u.fieldValues["emergencyContactNumber"].second = trim_whitespaces(field_buffer(fields[9], 0));
+    u.fieldValues["emergencyContactName"].second = trim_whitespaces(field_buffer(fields[11], 0));
+
+    // Clean up
+    unpost_form(form);
+    free_form(form);
+    for (int i = 0; fields[i]; i++)
+    {
+        free_field(fields[i]);
+    }
+    wclear(win_form);
+    wclear(win_body);
+    delwin(win_form);
+    delwin(win_body);
+    delwin(error_win);
+    clear();
+    refresh();
+
+    EventManager &eventManager = EventManager::getInstance();
+    eventManager.switchScreen(Screen::UpdateSelectionPatientScreen);
+}
+
+void renderUpdateSelectionPatientScreen()
+{
+    renderHeader();
+    renderControlInfo();
+
+    Color &colorScheme = Color::getInstance();
+    // Were using registration variables here for the menu
+    RegistrationPatient &reg = RegistrationPatient::getInstance();
+    UpdatePatient &u = UpdatePatient::getInstance();
+
+    auto patient = std::dynamic_pointer_cast<Patient>(u.user);
+
+    int baseline = 11;
+    std::string header = "Updating " + patient->fullName + "'s account";
+    mvprintw(baseline, (COLS - header.length()) / 2, "%s", header.c_str());
+
+    bkgd(COLOR_PAIR(colorScheme.primary));
+
+    int outer_height = 20;
+    int outer_width = 60;
+
+    int start_y = ((LINES - outer_height) / 2) + 4;
+    int start_x = (COLS - outer_width) / 2;
+
+    // Create the main window (win_body)
+    WINDOW *win_body = newwin(outer_height, outer_width, start_y, start_x);
+    wbkgd(win_body, COLOR_PAIR(colorScheme.primary));
+    box(win_body, 0, 0);
+
+    // Draw the subheader on win_body
+    std::string subHeader = "Personal Information (Continued)";
+    mvwprintw(win_body, 1, (outer_width - subHeader.length()) / 2, "%s", subHeader.c_str());
+    wrefresh(win_body); // Refresh win_body to show the subheader
+
+    int inner_height = outer_height - 4;
+    int inner_width = outer_width - 4;
+
+    // Create the subwindow (win_form) inside win_body
+    WINDOW *win_form = derwin(win_body, inner_height, inner_width, 2, 2);
+    wbkgd(win_form, COLOR_PAIR(colorScheme.primary));
+    box(win_form, 0, 0);
+    wrefresh(win_form); // Refresh win_form to show the box
+
+    bool done = false;
+    keypad(win_form, TRUE);
+    curs_set(0);
+
+    std::string *fields[] = {
+        &patient->gender,
+        &patient->religion,
+        &patient->race,
+        &patient->maritalStatus,
+        &patient->nationality};
+
+    for (int i = 0; i < static_cast<int>(reg.menuArrs.size()); i++)
+    {
+        auto &menu = reg.menuArrs[i];
+        auto it = std::find(menu.begin(), menu.end(), *fields[i]);
+
+        if (it != menu.end())
+        {
+            reg.selectedIndices[i] = std::distance(menu.begin(), it);
+        }
+        else
+        {
+            reg.selectedIndices[i] = 0;
+        }
+    }
+
+    while (!done)
+    {
+        // Clear win_form and redraw its border
+        werase(win_form);
+        box(win_form, 0, 0);
+
+        // Update registration data with selected values
+        u.fieldValues["gender"].second = reg.menuArrs[0][reg.selectedIndices[0]];
+        u.fieldValues["religion"].second = reg.menuArrs[1][reg.selectedIndices[1]];
+        u.fieldValues["race"].second = reg.menuArrs[2][reg.selectedIndices[2]];
+        u.fieldValues["maritalStatus"].second = reg.menuArrs[3][reg.selectedIndices[3]];
+        u.fieldValues["nationality"].second = reg.menuArrs[4][reg.selectedIndices[4]];
+
+        int y_offset = 2;
+
+        // Render all menus
+        for (int i = 0; i < static_cast<int>(reg.menuArrs.size()); ++i)
+        {
+            if (i == reg.currentMenu)
+            {
+                wattron(win_form, A_BOLD); // Highlight the current menu
+            }
+            renderHorizontalMenuStack(win_form, reg.menuArrs[i], reg.labelArr[i], y_offset, reg.selectedIndices[i], 2);
+            if (i == reg.currentMenu)
+            {
+                wattroff(win_form, A_BOLD); // Turn off highlighting
+            }
+            y_offset += 3; // Move down for the next menu
+        }
+
+        wrefresh(win_form); // Refresh win_form to show the menus
+
+        // Handle user input
+        int ch = wgetch(win_form);
+        switch (ch)
+        {
+        case KEY_UP:
+            if (reg.currentMenu > 0)
+                reg.currentMenu--; // Move up to previous menu
+            break;
+        case KEY_DOWN:
+            if (reg.currentMenu < static_cast<int>(reg.menuArrs.size() - 1))
+                reg.currentMenu++; // Move down to next menu
+            break;
+        case KEY_LEFT:
+            if (reg.selectedIndices[reg.currentMenu] > 0)
+                reg.selectedIndices[reg.currentMenu]--; // Move left in current menu
+            break;
+        case KEY_RIGHT:
+            if (reg.selectedIndices[reg.currentMenu] < static_cast<int>(reg.menuArrs[reg.currentMenu].size() - 1))
+                reg.selectedIndices[reg.currentMenu]++; // Move right in current menu
+            break;
+        case 10: // Enter key confirms selection and exits
+            done = true;
+            break;
+        case 2: // Custom key for "Back"
+            navigationHandler(nullptr, nullptr, win_form, win_body, Screen::UpdatePersonalPatientScreen);
+            break;
+        }
+    }
+
+    u.handleUpdatePatient(patient->getId());
+    reg.reset();
+    u.reset();
+    navigationHandler(nullptr, nullptr, win_form, win_body, Screen::Database);
+}
+
+void renderUpdateAdminScreen()
+{
+    Color &colorScheme = Color::getInstance();
+    UpdateAdmin &u = UpdateAdmin::getInstance();
+    bkgd(COLOR_PAIR(colorScheme.primary));
+
+    renderHeader();
+    renderControlInfo();
+
+    auto admin = std::dynamic_pointer_cast<Admin>(u.user);
+
+    int baseline = 11;
+    std::string header = "Updating " + admin->fullName + "'s account";
+    mvprintw(baseline, (COLS - header.length()) / 2, "%s", header.c_str());
+
+    bkgd(COLOR_PAIR(colorScheme.primary));
+
+    int outer_height = 16;
+    int outer_width = 60;
+
+    int start_y = ((LINES - outer_height) / 2) + 2;
+    int start_x = (COLS - outer_width) / 2;
+
+    WINDOW *win_body = newwin(outer_height, outer_width, start_y, start_x);
+    wbkgd(win_body, COLOR_PAIR(colorScheme.primary));
+    box(win_body, 0, 0);
+
+    std::string subHeader = "Account Information";
+    mvwprintw(win_body, 1, (outer_width - subHeader.length()) / 2, "%s", subHeader.c_str());
+
+    int inner_height = outer_height - 4;
+    int inner_width = outer_width - 4;
+
+    WINDOW *win_form = derwin(win_body, inner_height, inner_width, 2, 2);
+    wbkgd(win_form, COLOR_PAIR(colorScheme.primary));
+    box(win_form, 0, 0);
+
+    FIELD *fields[11];
+    fields[0] = new_field(1, 10, 0, 1, 0, 0);  // Label: Username
+    fields[1] = new_field(1, 30, 0, 13, 0, 0); // Input: Username
+    fields[2] = new_field(1, 10, 2, 1, 0, 0);  // Label: Password
+    fields[3] = new_field(1, 30, 2, 13, 0, 0); // Input: Password
+    fields[4] = new_field(1, 10, 4, 1, 0, 0);  // Label: Full Name
+    fields[5] = new_field(1, 30, 4, 13, 0, 0); // Input: Full Name
+    fields[6] = new_field(1, 10, 6, 1, 0, 0);  // Label: Email
+    fields[7] = new_field(1, 30, 6, 13, 0, 0); // Input: Email
+    fields[8] = new_field(1, 16, 8, 1, 0, 0);  // Label: Contact Number
+    fields[9] = new_field(1, 30, 8, 20, 0, 0); // Input: Contact Number
+    fields[10] = NULL;
+
+    assert(fields[0] && fields[1] && fields[2] && fields[3] && fields[4] &&
+           fields[5] && fields[6] && fields[7] && fields[8] && fields[9]);
+
+    set_field_buffer(fields[0], 0, "Username:");
+    set_field_buffer(fields[1], 0, u.fieldValues["username"].second.c_str());
+    set_field_buffer(fields[2], 0, "Password:");
+    set_field_buffer(fields[3], 0, u.fieldValues["password"].second.c_str());
+    set_field_buffer(fields[4], 0, "Full Name:");
+    set_field_buffer(fields[5], 0, u.fieldValues["fullName"].second.c_str());
+    set_field_buffer(fields[6], 0, "Email:");
+    set_field_buffer(fields[7], 0, u.fieldValues["email"].second.c_str());
+    set_field_buffer(fields[8], 0, "Contact Number:");
+    set_field_buffer(fields[9], 0, u.fieldValues["contactNumber"].second.c_str());
+
+    // Set field options
+    for (int i = 0; fields[i]; i++)
+    {
+        if (i % 2 == 0)
+        {                                                               // Labels
+            set_field_opts(fields[i], O_VISIBLE | O_PUBLIC | O_STATIC); // Read-only
+        }
+        else
+        { // Input fields
+            set_field_opts(fields[i], O_VISIBLE | O_PUBLIC | O_EDIT | O_ACTIVE | O_AUTOSKIP);
+        }
+        set_field_back(fields[i], COLOR_PAIR(colorScheme.primary)); // Set background color
+    }
+
+    // Create and post form
+    FORM *form = new_form(fields);
+    assert(form);
+    set_form_win(form, win_form);
+    set_form_sub(form, derwin(win_form, inner_height - 2, inner_width - 2, 1, 1));
+    post_form(form);
+
+    // Refresh windows
+    wrefresh(win_body);
+    wrefresh(win_form);
+
+    // Create a dedicated error window
+    int error_win_height = 1;
+    int error_win_width = 32;
+    int error_win_y = LINES - 2;
+    int error_win_x = (COLS - error_win_width) / 2;
+
+    WINDOW *error_win = newwin(error_win_height, error_win_width, error_win_y, error_win_x);
+    wbkgd(error_win, COLOR_PAIR(colorScheme.danger));
+
+    // Create a dedicated status window
+    int status_win_height = 5;
+    int status_win_width = 34;
+    int status_win_y = LINES - 6;
+    int status_win_x = (COLS - status_win_width) / 2;
+
+    WINDOW *status_win = newwin(status_win_height, status_win_width, status_win_y, status_win_x);
+    box(status_win, 0, 0);
+
+    // Input loop
+    bool done = false;
+    int ch;
+
+    while (!done)
+    {
+        while ((ch = getch()) != '\n')
+        {
+            driver_form(
+                ch,
+                form,
+                fields,
+                win_form,
+                win_body,
+                [&]()
+                { exitHandler(); },
+                [&]()
+                {   u.reset();
+                    navigationHandler(form, fields, win_form, win_body, Screen::Database); });
+        }
+        form_driver(form, REQ_VALIDATION);
+        if (!validateFields(fields))
+        {
+            mvwprintw(error_win, 0, 0, "Please fill all required fields");
+            wrefresh(error_win);
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+            werase(error_win);
+            wrefresh(error_win);
+        }
+        else
+        {
+            done = true;
+        }
+    }
+
+    form_driver(form, REQ_VALIDATION);
+
+    // Extract form data
+    u.fieldValues["username"].second = trim_whitespaces(field_buffer(fields[1], 0));
+    u.fieldValues["password"].second = trim_whitespaces(field_buffer(fields[3], 0));
+    u.fieldValues["fullName"].second = trim_whitespaces(field_buffer(fields[5], 0));
+    u.fieldValues["email"].second = trim_whitespaces(field_buffer(fields[7], 0));
+    u.fieldValues["contactNumber"].second = trim_whitespaces(field_buffer(fields[9], 0));
+
+    u.handleUpdateAdmin(admin->getId());
+    u.reset();
+    navigationHandler(nullptr, nullptr, win_form, win_body, Screen::Database);
 }

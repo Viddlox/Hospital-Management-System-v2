@@ -23,7 +23,9 @@
 #include <memory>
 #include <map>
 #include "Admissions.hpp"
+#include "UserManager.hpp"
 #include "utils.hpp"
+#include <unordered_map>
 
 #include <csignal>
 #if defined(_WIN32) || defined(_WIN64)
@@ -51,7 +53,11 @@ enum class Screen
     Profile,
     ProfileAdmissions,
     Database,
-    Admission
+    Admission,
+    UpdateAccountPatientScreen,
+    UpdatePersonalPatientScreen,
+    UpdateSelectionPatientScreen,
+    UpdateAdminScreen
 };
 
 struct Color
@@ -173,7 +179,6 @@ struct Profile
                     }
                 }
             }
-
             if (!matchedDates.empty())
             {
                 res[record.first] = matchedDates;
@@ -544,6 +549,157 @@ private:
     Database() {} // Private constructor to prevent multiple instances
 };
 
+struct UpdatePatient
+{
+    std::shared_ptr<User> user;
+    std::unordered_map<std::string, std::pair<std::string, std::string>> fieldValues;
+
+    void reset()
+    {
+        fieldValues.clear();
+    }
+
+    void populateValues(std::shared_ptr<Patient> patient)
+    {
+        if (!patient)
+            return;
+
+        fieldValues = {
+            {"username", {patient->username, patient->username}},
+            {"password", {patient->password, patient->password}},
+            {"fullName", {patient->fullName, patient->fullName}},
+            {"religion", {patient->religion, patient->religion}},
+            {"nationality", {patient->nationality, patient->nationality}},
+            {"identityCardNumber", {patient->identityCardNumber, patient->identityCardNumber}},
+            {"maritalStatus", {patient->maritalStatus, patient->maritalStatus}},
+            {"gender", {patient->gender, patient->gender}},
+            {"race", {patient->race, patient->race}},
+            {"contactNumber", {patient->contactNumber, patient->contactNumber}},
+            {"emergencyContactNumber", {patient->emergencyContactNumber, patient->emergencyContactNumber}},
+            {"emergencyContactName", {patient->emergencyContactName, patient->emergencyContactName}},
+            {"email", {patient->email, patient->email}},
+            {"address", {patient->address, patient->address}},
+            {"height", {patient->height, patient->height}},
+            {"weight", {patient->weight, patient->weight}},
+        };
+    }
+
+    void updateFieldValue(const std::string &fieldName, const std::string &newValue)
+    {
+        if (fieldValues.find(fieldName) != fieldValues.end())
+        {
+            fieldValues[fieldName].second = newValue;
+        }
+    }
+
+    void handleUpdatePatient(const std::string &userId)
+    {
+        UserManager &userManager = UserManager::getInstance();
+        auto patient = std::dynamic_pointer_cast<Patient>(userManager.getUserById(userId));
+
+        for (const auto &entry : fieldValues)
+        {
+            const std::string &fieldName = entry.first;
+            const std::string &prev = entry.second.first;
+            const std::string &curr = entry.second.second;
+
+            if (prev != curr)
+            {
+                if (fieldName == "identityCardNumber")
+                {
+                    int newAge = calculateAge(curr);
+                    userManager.updateUser(userId, "age", std::to_string(newAge));
+                }
+                if (fieldName == "height" || fieldName == "weight")
+                {
+                    double newBMI = calculateBMI(fieldValues["weight"].second, fieldValues["height"].second);
+                    userManager.updateUser(userId, "bmi", std::to_string(newBMI));
+                }
+                userManager.updateUser(userId, fieldName, curr);
+            }
+        }
+    }
+
+    // Singleton Implementation
+    static UpdatePatient &getInstance()
+    {
+        static UpdatePatient instance;
+        return instance;
+    }
+
+    // Delete copy constructor and assignment operator to prevent accidental copies
+    UpdatePatient(const UpdatePatient &) = delete;
+    UpdatePatient &operator=(const UpdatePatient &) = delete;
+
+private:
+    UpdatePatient() {} // Private constructor to prevent multiple instances
+};
+
+struct UpdateAdmin
+{
+    std::shared_ptr<User> user;
+    std::unordered_map<std::string, std::pair<std::string, std::string>> fieldValues;
+
+    void reset()
+    {
+        fieldValues.clear();
+    }
+
+    void populateValues(std::shared_ptr<Admin> admin)
+    {
+        if (!admin)
+            return;
+
+        fieldValues = {
+            {"username", {admin->username, admin->username}},
+            {"password", {admin->password, admin->password}},
+            {"fullName", {admin->fullName, admin->fullName}},
+            {"email", {admin->email, admin->email}},
+            {"contactNumber", {admin->contactNumber, admin->contactNumber}},
+
+        };
+    }
+
+    void updateFieldValue(const std::string &fieldName, const std::string &newValue)
+    {
+        if (fieldValues.find(fieldName) != fieldValues.end())
+        {
+            fieldValues[fieldName].second = newValue;
+        }
+    }
+
+    void handleUpdateAdmin(const std::string &userId)
+    {
+        UserManager &userManager = UserManager::getInstance();
+
+        for (const auto &entry : fieldValues)
+        {
+            const std::string &fieldName = entry.first;
+            const std::string &prev = entry.second.first;
+            const std::string &curr = entry.second.second;
+
+            if (prev != curr)
+            {
+                userManager.updateUser(userId, fieldName, curr);
+            }
+        }
+    }
+
+    // Singleton Implementation
+    static UpdateAdmin &getInstance()
+    {
+        static UpdateAdmin instance;
+        return instance;
+    }
+
+    // Delete copy constructor and assignment operator to prevent accidental copies
+    UpdateAdmin(const UpdateAdmin &) = delete;
+    UpdateAdmin &operator=(const UpdateAdmin &) = delete;
+
+private:
+    UpdateAdmin() {} // Private constructor to prevent multiple instances
+};
+
 void renderLoginScreen();
 void renderDashboardScreen();
 void handleDashboardOptions();
@@ -556,7 +712,7 @@ void renderRegistrationScreenAdmin();
 void renderRegistrationAccountPatientScreen();
 void renderRegistrationPersonalPatientScreen();
 void renderRegistrationSelectionPatientScreen();
-void backHandler(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body, Screen prevScreen);
+void navigationHandler(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body, Screen screen);
 void exitHandler();
 void renderHorizontalMenuStack(WINDOW *win, const std::vector<std::string> &items, const std::string &title, int y_offset, int &selected_index, int start_x);
 bool validateFields(FIELD **fields);
@@ -566,5 +722,9 @@ void handleDatabaseControls(WINDOW *win_form, WINDOW *win_body);
 void renderProfileScreen();
 void renderProfileAdmissionsScreen();
 void renderAdmissionScreen();
+void renderUpdateAccountPatientScreen();
+void renderUpdatePersonalPatientScreen();
+void renderUpdateSelectionPatientScreen();
+void renderUpdateAdminScreen();
 
 #endif

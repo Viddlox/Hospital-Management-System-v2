@@ -343,7 +343,7 @@ public:
 				return;
 			}
 
-			static const std::unordered_map<std::string, std::function<void(const std::string &)>> adminUpdates = {
+			std::unordered_map<std::string, std::function<void(const std::string &)>> adminUpdates = {
 				{"username", [&admin](const std::string &value)
 				 { admin->username = value; }},
 				{"password", [&admin](const std::string &value)
@@ -361,7 +361,6 @@ public:
 			{
 				it->second(newValue);
 				admin->saveToFile();
-				std::cout << "Admin with ID " << userId << " updated successfully. Field: " << fieldName << "\n";
 			}
 			else
 			{
@@ -380,19 +379,10 @@ public:
 				return;
 			}
 
-			static const std::unordered_map<std::string, std::function<void(const std::string &)>> patientUpdates = {
+			std::unordered_map<std::string, std::function<void(const std::string &)>> patientUpdates = {
 				// Personal Information
 				{"age", [&patient](const std::string &value)
-				 {
-					 try
-					 {
-						 patient->age = std::stoi(value);
-					 }
-					 catch (const std::exception &e)
-					 {
-						 std::cerr << "Invalid value for 'age': " << value << "\n";
-					 }
-				 }},
+				 { patient->age = std::stoi(value); }},
 				{"fullName", [&patient](const std::string &value)
 				 { patient->fullName = value; }},
 				{"religion", [&patient](const std::string &value)
@@ -419,43 +409,24 @@ public:
 				 { patient->emergencyContactName = value; }},
 				{"address", [&patient](const std::string &value)
 				 { patient->address = value; }},
+				{"username", [&patient](const std::string &value)
+				 { patient->username = value; }},
+				{"password", [&patient](const std::string &value)
+				 { patient->password = value; }},
+				{"bmi", [&patient](const std::string &value)
+				 { patient->bmi = std::stod(value); }},
 
 				// Medical Information
-				{"bmi", [&patient](const std::string &value)
-				 {
-					 try
-					 {
-						 patient->bmi = std::stod(value);
-					 }
-					 catch (const std::exception &e)
-					 {
-						 std::cerr << "Invalid value for 'bmi': " << value << "\n";
-					 }
-				 }},
 				{"height", [&patient](const std::string &value)
 				 { patient->height = value; }},
 				{"weight", [&patient](const std::string &value)
-				 { patient->weight = value; }},
-				{"admissions", [&patient](const std::string &value)
-				 {
-					 try
-					 {
-						 Admissions::Department dept = Admissions::stringToDepartment(value);
-						 std::string dateTime = formatTimestamp(std::chrono::system_clock::now());
-						 patient->admissions[dept].push_back(dateTime);
-					 }
-					 catch (const std::exception &e)
-					 {
-						 std::cerr << "Invalid department name for admissions: " << value << "\n";
-					 }
-				 }}};
+				 { patient->weight = value; }}};
 
 			auto it = patientUpdates.find(fieldName);
 			if (it != patientUpdates.end())
 			{
 				it->second(newValue);
 				patient->saveToFile();
-				std::cout << "Patient with ID " << userId << " updated successfully. Field: " << fieldName << "\n";
 			}
 			else
 			{
