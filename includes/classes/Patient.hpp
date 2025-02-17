@@ -149,6 +149,31 @@ public:
         p.bmi = j.at("bmi").get<double>();
         p.height = j.at("height").get<std::string>();
         p.weight = j.at("weight").get<std::string>();
+
+        // Deserialize admissions map and sort by createdAt
+        if (j.contains("admissions"))
+        {
+            for (const auto &[deptStr, dateList] : j["admissions"].items())
+            {
+                Admissions::Department dept = Admissions::stringToDepartment(deptStr);
+                p.admissions[dept] = dateList.get<std::vector<std::string>>();
+                std::sort(p.admissions[dept].begin(), p.admissions[dept].end(), std::greater<std::string>());
+            }
+        }
+
+        // Deserialize createdAt
+        std::string createdAtStr = j.at("createdAt").get<std::string>();
+        std::tm tm = {};
+        std::istringstream ss(createdAtStr);
+        ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
+
+        if (ss.fail())
+        {
+            throw std::invalid_argument("Invalid date format for createdAt");
+        }
+
+        std::time_t time = std::mktime(&tm);
+        p.createdAt = std::chrono::system_clock::from_time_t(time);
     }
 
     /**
