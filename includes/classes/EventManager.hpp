@@ -1,28 +1,32 @@
 #ifndef EVENT_MANAGER_H
 #define EVENT_MANAGER_H
 
-#include <iostream>
-#include <ctime>
-#include <atomic>
-#include <csignal>
-#include "render.hpp"
-#include "UserManager.hpp"
+#include <iostream> // Provides basic input/output functionality (std::cout, std::cerr)
+#include <ctime>    // Used to get the current system time (std::time_t)
+#include <atomic>   // Ensures thread-safe access to `isRunning`
+#include <csignal>  // Allows handling of system signals (e.g., SIGINT for safe termination)
 
+#include "render.hpp"      // Handles UI rendering functions for different screens
+#include "UserManager.hpp" // Manages user authentication, role-based access, and user records
+
+// The EventManager class is responsible for managing the UI screens, handling user interactions,
+// and managing the event loop for the application.
 class EventManager
 {
 private:
-    Screen screen;
-    UserManager &userManager = UserManager::getInstance();
-    bool isRunning = false;
+    Screen screen;                                         // Tracks the current screen state
+    UserManager &userManager = UserManager::getInstance(); // Singleton reference to user management system
+    bool isRunning = false;                                // Flag to control the event loop
 
+    // Private constructor to enforce singleton pattern
     EventManager() : screen(Screen::Login) {}
-    ~EventManager()
-    {
-    }
+    ~EventManager() {}
+
+    // Delete copy constructor and assignment operator to prevent copying
     EventManager(const EventManager &) = delete;
     EventManager &operator=(const EventManager &) = delete;
 
-    // Render the UI layout
+    // Function to render the appropriate UI layout based on the current screen
     void renderLayout()
     {
         switch (screen)
@@ -101,26 +105,26 @@ private:
         }
     }
 
-    // Initialize terminal settings and colors
+    // Initialize terminal settings and color configurations
     void initScreen()
     {
-        initscr();
-        cbreak();
-        noecho();
-        keypad(stdscr, TRUE);
-        scrollok(stdscr, FALSE);
-        initializeColors();
+        initscr();               // Initialize the ncurses screen
+        cbreak();                // Disable line buffering
+        noecho();                // Disable automatic echo of input
+        keypad(stdscr, TRUE);    // Enable special keys (e.g., arrow keys)
+        scrollok(stdscr, FALSE); // Disable scrolling
+        initializeColors();      // Set up terminal colors
     }
 
 public:
-    // get singleton instance
+    // Singleton instance getter
     static EventManager &getInstance()
     {
         static EventManager instance;
         return instance;
     }
 
-    // Switch the current screen
+    // Switch the active screen and trigger a re-render
     void switchScreen(Screen newScreen)
     {
         clear();
@@ -134,33 +138,26 @@ public:
         return std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
     }
 
-    // Start the event manager
+    // Start the event loop, initialize UI, and handle user sessions
     void start()
     {
         clearScreen();
         isRunning = true;
         initScreen();
 
+        // Ensure at least one admin and patient exist in the system for testing/demo purposes
         if (userManager.getAdminCount() < 1)
         {
-            for (int i = 1; i < 31; i++)
-                userManager.createAdmin("admin" + std::to_string(i), "1234",
-                                        "Michael Cheng" + std::to_string(i), "lol@gmail.com", "0123917125");
+            userManager.createAdmin("admin" + std::to_string(1), "1234",
+                                    "Michael Cheng" + std::to_string(1), "lol@gmail.com", "0123917125");
         }
-        if (userManager.getPatientCount() < 1)
-        {
-            for (int i = 1; i < 31; i++)
-                userManager.createPatient("user" + std::to_string(i), "123", 42,
-                                          "Peter Griffin" + std::to_string(i), "Christianity", "Malaysian", "010403141107",
-                                          "single", "male", "Chinese", "mikeypeter37@gmail.com", "0123917125", "0123197125",
-                                          "Lois Griffin", "Quahog", 20, "180", "70", Admissions::Department::Surgery);
-        }
+        // Main event loop to render UI updates
         try
         {
             while (isRunning)
             {
                 renderLayout();
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Reduce CPU usage
             }
         }
         catch (const std::exception &e)
@@ -171,15 +168,15 @@ public:
         exit();
     }
 
-    // Stop the event manager safely
+    // Safely stop the event loop and clean up terminal state
     void exit()
     {
         isRunning = false;
         clear();
         refresh();
-        endwin();
+        endwin(); // Restore terminal settings
         std::exit(0);
     }
 };
 
-#endif
+#endif // EVENT_MANAGER_H

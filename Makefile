@@ -1,12 +1,12 @@
 # Program name
 NAME = Hospital_Management_System.exe
 
-# Compiler and flags
+# Compiler and flags (f-sanitize commented for memory trace debugging)
 CC = g++
-CFLAGS = -Wall -std=c++17 -Iincludes -Iincludes/external -Iincludes/classes -mavx2 -m64
+CFLAGS = -Wall -std=c++17 -Iincludes -Iincludes/external -Iincludes/classes -mavx2 -m64 #-fsanitize=address -g
 
-# ncurses linking flags
-LDFLAGS = -lncursesw -pthread -lformw -lmenuw -pedantic
+# ncurses linking flags (f-sanitize commented for memory trace debugging)
+LDFLAGS = -lncursesw -pthread -lformw -lmenuw -pedantic #-fsanitize=address
 
 # Source files and object files
 SRCS = $(wildcard src/*.cpp)
