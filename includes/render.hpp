@@ -145,15 +145,26 @@ struct Profile
     // Generates list matrix from admission records
     void generateListMatrix(const std::map<Admissions::Department, std::vector<std::string>> &records)
     {
+        std::vector<std::vector<std::string>> listMatrixTmp;
+
         listMatrix.clear();
         for (const auto &record : records) // Iterate over departments
         {
             for (const auto &dateTime : record.second) // Iterate over admission dates
             {
-                listMatrix.push_back({Admissions::departmentToString(record.first),
-                                      dateTime,
-                                      "[Delete]"}); // Represents an admission entry
+                listMatrixTmp.push_back({Admissions::departmentToString(record.first),
+                                         dateTime,
+                                         "[Delete]"}); // Represents an admission entry
             }
+        }
+        // Sort by date time of subarray dateTime strings in lexicographical order (descending AKA newest first)
+        std::sort(listMatrixTmp.begin(), listMatrixTmp.end(), [](const std::vector<std::string> &a, const std::vector<std::string> &b)
+                  { return std::greater<std::string>()(a[1], b[1]); });
+
+        // Repopulate listMatrix after correctly ordering records by latest admission date
+        for (const auto &record : listMatrixTmp)
+        {
+            listMatrix.push_back(record);
         }
         totalPages = listMatrix.empty() ? 0 : (listMatrix.size() - 1) / pageSize + 1;
     }
@@ -811,7 +822,7 @@ void handleDatabaseControls(WINDOW *win_form, WINDOW *win_body);
 
 // Handles controls for menu components.
 void driver_form(int ch, FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body,
-    std::function<void()> exitHandler, std::function<void()> navigationHandler);
+                 std::function<void()> exitHandler, std::function<void()> navigationHandler);
 
 /* 2. COMMONS */
 

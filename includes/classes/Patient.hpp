@@ -65,7 +65,6 @@ public:
     {
         std::string dateTime = formatTimestamp(std::chrono::system_clock::now());
         admissions[dept].push_back(dateTime);
-        std::sort(admissions[dept].begin(), admissions[dept].end(), std::greater<std::string>());
         saveToFile();
     }
 
@@ -157,7 +156,6 @@ public:
             {
                 Admissions::Department dept = Admissions::stringToDepartment(deptStr);
                 p.admissions[dept] = dateList.get<std::vector<std::string>>();
-                std::sort(p.admissions[dept].begin(), p.admissions[dept].end(), std::greater<std::string>());
             }
         }
 
