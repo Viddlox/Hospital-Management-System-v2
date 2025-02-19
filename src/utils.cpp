@@ -107,3 +107,47 @@ double calculateBMI(const std::string &weight, const std::string &height)
 {
     return std::stod(weight) / pow((std::stod(height) / 100.0), 2);
 }
+
+bool validateContactNumber(const std::string &contactNumber)
+{
+    // Define a regex pattern for a valid contact number
+    std::regex phonePattern(R"(^\+?\d{10,15}$)");
+
+    // Check if the input matches the pattern
+    return std::regex_match(contactNumber, phonePattern);
+}
+
+bool validateIdentityCardNumber(const std::string &identityCardNumber)
+{
+    try
+    {
+        int age = calculateAge(identityCardNumber);
+        return (age >= 0 && age <= 130);
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
+
+bool validateHeightAndWeight(const std::string &height, const std::string &weight)
+{
+    try
+    {
+        int bmi = calculateBMI(weight, height);
+        return (bmi >= 10.0 && bmi <= 50.0);
+    }
+    catch (...)
+    {
+        return false;
+    } 
+}
+
+bool validateEmail(const std::string &email)
+{
+    // Define a regex pattern for validating email
+    const std::regex emailPattern(R"(^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$)");
+
+    // Return true if email matches the pattern, otherwise false
+    return std::regex_match(email, emailPattern);
+}

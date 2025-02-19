@@ -532,7 +532,7 @@ void renderRegistrationAccountPatientScreen()
 
     // Create a dedicated window for displaying error messages
     int error_win_height = 1;
-    int error_win_width = 32;
+    int error_win_width = 40;
     int error_win_y = LINES - 2;
     int error_win_x = (COLS - error_win_width) / 2;
     WINDOW *error_win = newwin(error_win_height, error_win_width, error_win_y, error_win_x);
@@ -561,13 +561,30 @@ void renderRegistrationAccountPatientScreen()
 
         // Validate the form data
         form_driver(form, REQ_VALIDATION);
-        if (!validateFields(fields)) // If validation fails, show error
+
+        std::string errorMessage;
+
+        // Validate required fields
+        if (!validateFields(fields))
         {
-            mvwprintw(error_win, 0, 0, "Please fill all required fields");
+            errorMessage = "Please fill all required fields";
+        }
+        else if (!validateEmail(trim_whitespaces(field_buffer(fields[5], 0))))
+        {
+            errorMessage = "Please enter a valid email";
+        }
+        else if (!validateContactNumber(trim_whitespaces(field_buffer(fields[9], 0))))
+        {
+            errorMessage = "Please enter a valid phone no.";
+        }
+        // If there's an error, display it
+        if (!errorMessage.empty())
+        {
+            mvwprintw(error_win, 0, 0, "%s", errorMessage.c_str());
             wrefresh(error_win);
-            std::this_thread::sleep_for(std::chrono::seconds(2)); // Display error for 2 seconds
+            std::this_thread::sleep_for(std::chrono::seconds(2)); // Show error for 2 seconds
             werase(error_win);
-            wrefresh(error_win); // Clear the error window
+            wrefresh(error_win); // Clear error window
         }
         else
         {
@@ -707,7 +724,7 @@ void renderRegistrationPersonalPatientScreen()
 
     // Create a dedicated error window for validation messages
     int error_win_height = 1;
-    int error_win_width = 32;
+    int error_win_width = 40;
     int error_win_y = LINES - 2;
     int error_win_x = (COLS - error_win_width) / 2;
 
@@ -738,17 +755,38 @@ void renderRegistrationPersonalPatientScreen()
 
         // Validate the form when 'Enter' is pressed
         form_driver(form, REQ_VALIDATION);
-        if (!validateFields(fields)) // If fields are invalid, show error
+
+        std::string errorMessage;
+
+        // Validate required fields
+        if (!validateFields(fields))
         {
-            mvwprintw(error_win, 0, 0, "Please fill all required fields");
+            errorMessage = "Please fill all required fields";
+        }
+        else if (!validateIdentityCardNumber(trim_whitespaces(field_buffer(fields[3], 0))))
+        {
+            errorMessage = "Please enter a valid IC number";
+        }
+        else if (!validateHeightAndWeight(trim_whitespaces(field_buffer(fields[5], 0)), trim_whitespaces(field_buffer(fields[7], 0))))
+        {
+            errorMessage = "Please enter a valid height/weight";
+        }
+        else if (!validateContactNumber(trim_whitespaces(field_buffer(fields[9], 0))))
+        {
+            errorMessage = "Please enter a valid emergency contact no.";
+        }
+        // If there's an error, display it
+        if (!errorMessage.empty())
+        {
+            mvwprintw(error_win, 0, 0, "%s", errorMessage.c_str());
             wrefresh(error_win);
             std::this_thread::sleep_for(std::chrono::seconds(2)); // Show error for 2 seconds
-            werase(error_win);                                    // Clear the error window
-            wrefresh(error_win);                                  // Refresh the error window
+            werase(error_win);
+            wrefresh(error_win); // Clear error window
         }
         else
         {
-            done = true; // If validation passes, break the loop
+            done = true; // Proceed if validation succeeds
         }
     }
 
@@ -1072,7 +1110,7 @@ void renderRegistrationScreenAdmin()
 
     // Create dedicated error and status windows
     int error_win_height = 1;
-    int error_win_width = 32;
+    int error_win_width = 40;
     int error_win_y = LINES - 2;
     int error_win_x = (COLS - error_win_width) / 2;
 
@@ -1111,17 +1149,30 @@ void renderRegistrationScreenAdmin()
                 });
         }
         form_driver(form, REQ_VALIDATION); // Validate the form
-        if (!validateFields(fields))       // If validation fails, show an error message
+
+        std::string errorMessage;
+
+        // Validate required fields
+        if (!validateFields(fields))
         {
-            mvwprintw(error_win, 0, 0, "Please fill all required fields");
+            errorMessage = "Please fill all required fields";
+        }
+        else if (!validateEmail(trim_whitespaces(field_buffer(fields[7], 0))))
+        {
+            errorMessage = "Please enter a valid email";
+        }
+        // If there's an error, display it
+        if (!errorMessage.empty())
+        {
+            mvwprintw(error_win, 0, 0, "%s", errorMessage.c_str());
             wrefresh(error_win);
-            std::this_thread::sleep_for(std::chrono::seconds(2)); // Display the error for 2 seconds
+            std::this_thread::sleep_for(std::chrono::seconds(2)); // Show error for 2 seconds
             werase(error_win);
-            wrefresh(error_win);
+            wrefresh(error_win); // Clear error window
         }
         else
         {
-            done = true; // Proceed if form is valid
+            done = true; // Proceed if validation succeeds
         }
     }
 
@@ -2375,7 +2426,7 @@ void renderUpdateAccountPatientScreen()
 
     // Create an error window for form validation feedback
     int error_win_height = 1;
-    int error_win_width = 32;
+    int error_win_width = 40;
     int error_win_y = LINES - 2;
     int error_win_x = (COLS - error_win_width) / 2;
     WINDOW *error_win = newwin(error_win_height, error_win_width, error_win_y, error_win_x);
@@ -2407,18 +2458,34 @@ void renderUpdateAccountPatientScreen()
 
         // Validate the form data when Enter key is pressed
         form_driver(form, REQ_VALIDATION);
+
+        std::string errorMessage;
+
+        // Validate required fields
         if (!validateFields(fields))
         {
-            // If validation fails, show an error message and wait before clearing
-            mvwprintw(error_win, 0, 0, "Please fill all required fields");
+            errorMessage = "Please fill all required fields";
+        }
+        else if (!validateEmail(trim_whitespaces(field_buffer(fields[5], 0))))
+        {
+            errorMessage = "Please enter a valid email";
+        }
+        else if (!validateContactNumber(trim_whitespaces(field_buffer(fields[9], 0))))
+        {
+            errorMessage = "Please enter a valid phone no.";
+        }
+        // If there's an error, display it
+        if (!errorMessage.empty())
+        {
+            mvwprintw(error_win, 0, 0, "%s", errorMessage.c_str());
             wrefresh(error_win);
-            std::this_thread::sleep_for(std::chrono::seconds(2));
+            std::this_thread::sleep_for(std::chrono::seconds(2)); // Show error for 2 seconds
             werase(error_win);
-            wrefresh(error_win);
+            wrefresh(error_win); // Clear error window
         }
         else
         {
-            done = true; // If validation succeeds, exit loop
+            done = true; // Proceed if validation succeeds
         }
     }
 
@@ -2564,7 +2631,7 @@ void renderUpdatePersonalPatientScreen()
 
     // Create a dedicated window to show error messages
     int error_win_height = 1;
-    int error_win_width = 32;
+    int error_win_width = 40;
     int error_win_y = LINES - 2;
     int error_win_x = (COLS - error_win_width) / 2;
     WINDOW *error_win = newwin(error_win_height, error_win_width, error_win_y, error_win_x);
@@ -2590,17 +2657,38 @@ void renderUpdatePersonalPatientScreen()
                 { navigationHandler(form, fields, win_form, win_body, Screen::UpdateAccountPatientScreen); }); // Navigation handler
         }
         form_driver(form, REQ_VALIDATION); // Validate the form on pressing Enter
-        if (!validateFields(fields))       // If any field is invalid, show error
+
+        std::string errorMessage;
+
+        // Validate required fields
+        if (!validateFields(fields))
         {
-            mvwprintw(error_win, 0, 0, "Please fill all required fields");
+            errorMessage = "Please fill all required fields";
+        }
+        else if (!validateIdentityCardNumber(trim_whitespaces(field_buffer(fields[3], 0))))
+        {
+            errorMessage = "Please enter a valid IC number";
+        }
+        else if (!validateHeightAndWeight(trim_whitespaces(field_buffer(fields[5], 0)), trim_whitespaces(field_buffer(fields[7], 0))))
+        {
+            errorMessage = "Please enter a valid height/weight";
+        }
+        else if (!validateContactNumber(trim_whitespaces(field_buffer(fields[9], 0))))
+        {
+            errorMessage = "Please enter a valid emergency contact no.";
+        }
+        // If there's an error, display it
+        if (!errorMessage.empty())
+        {
+            mvwprintw(error_win, 0, 0, "%s", errorMessage.c_str());
             wrefresh(error_win);
             std::this_thread::sleep_for(std::chrono::seconds(2)); // Show error for 2 seconds
-            werase(error_win);                                    // Clear error message
-            wrefresh(error_win);
+            werase(error_win);
+            wrefresh(error_win); // Clear error window
         }
         else
         {
-            done = true; // All fields are valid, exit loop
+            done = true; // Proceed if validation succeeds
         }
     }
 
@@ -2875,7 +2963,7 @@ void renderUpdateAdminScreen()
 
     // Create an error window for displaying validation messages
     int error_win_height = 1;
-    int error_win_width = 32;
+    int error_win_width = 40;
     int error_win_y = LINES - 2;
     int error_win_x = (COLS - error_win_width) / 2;
     WINDOW *error_win = newwin(error_win_height, error_win_width, error_win_y, error_win_x);
@@ -2905,18 +2993,29 @@ void renderUpdateAdminScreen()
 
         form_driver(form, REQ_VALIDATION); // Validate form fields
 
-        // Check if all required fields are filled
+        std::string errorMessage;
+
+        // Validate required fields
         if (!validateFields(fields))
         {
-            mvwprintw(error_win, 0, 0, "Please fill all required fields"); // Show error if fields are missing
-            wrefresh(error_win);                                           // Refresh error window
-            std::this_thread::sleep_for(std::chrono::seconds(2));          // Display error for 2 seconds
-            werase(error_win);                                             // Clear error window
-            wrefresh(error_win);                                           // Refresh error window
+            errorMessage = "Please fill all required fields";
+        }
+        else if (!validateEmail(trim_whitespaces(field_buffer(fields[7], 0))))
+        {
+            errorMessage = "Please enter a valid email";
+        }
+        // If there's an error, display it
+        if (!errorMessage.empty())
+        {
+            mvwprintw(error_win, 0, 0, "%s", errorMessage.c_str());
+            wrefresh(error_win);
+            std::this_thread::sleep_for(std::chrono::seconds(2)); // Show error for 2 seconds
+            werase(error_win);
+            wrefresh(error_win); // Clear error window
         }
         else
         {
-            done = true; // End loop if form is valid
+            done = true; // Proceed if validation succeeds
         }
     }
 

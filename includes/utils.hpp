@@ -8,6 +8,7 @@
 #include <algorithm>  // For string manipulation (e.g., trimming, case conversion)
 #include <cctype>     // For character classification (e.g., checking whitespace)
 #include <cstring>    // For C-style string manipulation
+#include <regex>
 
 #include "uuid_v4.h"  // Include for generating unique UUIDs
 
@@ -69,5 +70,35 @@ int calculateAge(const std::string &identityCardNumber);
  * @return The calculated BMI value.
  */
 double calculateBMI(const std::string &weight, const std::string &height);
+
+/**
+ * @brief Validates contact number.
+ * @param contactNumber contact number as a string.
+ * @return True or false.
+ */
+bool validateContactNumber(const std::string &contactNumber);
+
+/**
+ * @brief Validates identity card number.
+ * @param contactNumber identity card number as a string.
+ * @return True or false.
+ */
+bool validateIdentityCardNumber(const std::string &identityCardNumber);
+
+/**
+ * @brief Validates height and weight.
+ * @param height The height as a string (assumed to be in meters).
+ * @param weight The weight as a string (assumed to be in kg).
+ * @return True or false.
+ */
+bool validateHeightAndWeight(const std::string &height, const std::string &weight);
+
+/**
+ * @brief Validates email address.
+ * @param email email address as a string.
+ * @return True or false.
+ */
+bool validateEmail(const std::string &email);
+
 
 #endif // UTILS_H

@@ -10,7 +10,7 @@ CC = g++  # The C++ compiler being used
 # -Iincludes -Iincludes/external -Iincludes/classes: Includes directories for header files
 # -mavx2 -m64: Enables AVX2 (Advanced Vector Extensions) and compiles for 64-bit architecture
 # -fsanitize=address -g: (Commented) Used for memory debugging; enables address sanitizer and debugging symbols
-CFLAGS = -Wall -std=c++17 -Iincludes -Iincludes/external -Iincludes/classes -mavx2 -m64 #-fsanitize=address -g
+CFLAGS = -Wall -std=c++17 -Iincludes -Iincludes/external -Iincludes/classes -mavx2 -m64 -fsanitize=address -g
 
 # Linker flags:
 # -lncursesw: Links the ncurses library (wide-character version)
@@ -18,7 +18,7 @@ CFLAGS = -Wall -std=c++17 -Iincludes -Iincludes/external -Iincludes/classes -mav
 # -lformw -lmenuw: Links the ncurses form and menu libraries (wide-character version)
 # -pedantic: Enforces strict compliance with the standard
 # -fsanitize=address: (Commented) Used for memory debugging
-LDFLAGS = -lncursesw -pthread -lformw -lmenuw -pedantic #-fsanitize=address
+LDFLAGS = -lncursesw -pthread -lformw -lmenuw -pedantic -fsanitize=address
 
 # Source files - Finds all C++ source files inside the 'src' directory
 SRCS = $(wildcard src/*.cpp)
