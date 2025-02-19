@@ -55,13 +55,43 @@ void printCentered(WINDOW *win, int startRow, const std::string &text)
     }
 }
 
-void exitHandler()
+void exitHandler(FORM *form, FIELD **fields, std::vector<WINDOW *> &windows)
 {
+    // Clean up form
+    if (form)
+    {
+        unpost_form(form);
+        free_form(form);
+        form = nullptr;
+    }
+
+    // Free all fields
+    if (fields)
+    {
+        for (int i = 0; fields[i]; i++)
+        {
+            free_field(fields[i]);
+        }
+        fields = nullptr;
+    }
+
+    // Clear and delete all windows
+    for (WINDOW *win : windows)
+    {
+        wclear(win);
+        wrefresh(win);
+        delwin(win);
+    }
+
+    // Restore terminal settings to normal mode
+    endwin();
+
+    // Exit the program
     EventManager &eventManager = EventManager::getInstance();
     eventManager.exit();
 }
 
-void navigationHandler(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body, Screen screen)
+void navigationHandler(FORM *form, FIELD **fields, std::vector<WINDOW *> &windows, Screen screen)
 {
     // Get the instance of EventManager for screen switching
     EventManager &eventManager = EventManager::getInstance();
@@ -69,24 +99,33 @@ void navigationHandler(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win
     // Clean up the form if it exists
     if (form)
     {
-        unpost_form(form); // Unpost the form to remove it from the screen
-        free_form(form);   // Free the memory used by the form
+        unpost_form(form);
+        free_form(form);
+        form = nullptr;
     }
 
-    // Clean up fields if they exist
     if (fields)
     {
         for (int i = 0; fields[i]; i++)
         {
-            free_field(fields[i]); // Free each field
+            free_field(fields[i]);
+        }
+        fields = nullptr;
+    }
+
+    // Clear and delete each window in the vector
+    for (WINDOW *win : windows)
+    {
+        if (win)
+        {
+            wclear(win);
+            wrefresh(win);
+            delwin(win);
         }
     }
 
-    // Clear the windows and delete them
-    wclear(win_form);
-    wclear(win_body);
-    delwin(win_form);
-    delwin(win_body);
+    // Clear the vector since all windows have been deleted
+    windows.clear();
 
     // Clear the screen and refresh
     clear();
@@ -300,7 +339,6 @@ void renderHorizontalMenuStack(WINDOW *win, const std::vector<std::string> &item
 
 void renderLoginScreen()
 {
-    EventManager &eventManager = EventManager::getInstance();
     UserManager &userManager = UserManager::getInstance();
     Color &colorScheme = Color::getInstance();
     userManager.setCurrentUser(nullptr);
@@ -371,6 +409,8 @@ void renderLoginScreen()
     wrefresh(win_body);
     wrefresh(win_form);
 
+    std::vector<WINDOW *> windows = {win_body, win_form};
+
     // Main input loop
     int ch;
     while ((ch = getch()) != '\n')
@@ -396,7 +436,7 @@ void renderLoginScreen()
             form_driver(form, REQ_DEL_PREV);
             break;
         case 27:
-            eventManager.exit();
+            exitHandler(nullptr, nullptr, windows);
             break;
         case KEY_DC:
             form_driver(form, REQ_DEL_CHAR);
@@ -417,13 +457,7 @@ void renderLoginScreen()
     // Validate user credentials
     if (userManager.validateUser(username, password))
     {
-        unpost_form(form);
-        free_form(form);
-        for (int i = 0; fields[i]; ++i)
-            free_field(fields[i]);
-        delwin(win_form);
-        delwin(win_body);
-        eventManager.switchScreen(Screen::Dashboard);
+        navigationHandler(nullptr, nullptr, windows, Screen::Dashboard);
     }
     else
     {
@@ -538,6 +572,8 @@ void renderRegistrationAccountPatientScreen()
     WINDOW *error_win = newwin(error_win_height, error_win_width, error_win_y, error_win_x);
     wbkgd(error_win, COLOR_PAIR(colorScheme.danger)); // Set background color for error window
 
+    std::vector<WINDOW *> windows = {win_body, win_form, error_win};
+
     // Input loop for form validation
     bool done = false;
     int ch;
@@ -553,10 +589,12 @@ void renderRegistrationAccountPatientScreen()
                 win_form,
                 win_body,
                 [&]()
-                { exitHandler(); }, // Handle exit
+                { exitHandler(form, fields, windows); }, // Handle exit
                 [&]()
-                { reg.reset(); navigationHandler(form, fields, win_form, win_body, Screen::Database); } // Handle navigation
-            );
+                {
+                    reg.reset();
+                    navigationHandler(form, fields, windows, Screen::Database);
+                });
         }
 
         // Validate the form data
@@ -601,24 +639,7 @@ void renderRegistrationAccountPatientScreen()
     reg.address = trim_whitespaces(field_buffer(fields[7], 0));
     reg.contactNumber = trim_whitespaces(field_buffer(fields[9], 0));
 
-    // Clean up the form, fields, and windows after form submission
-    unpost_form(form);
-    free_form(form);
-    for (int i = 0; fields[i]; i++)
-    {
-        free_field(fields[i]);
-    }
-    wclear(win_form);
-    wclear(win_body);
-    delwin(win_form);
-    delwin(win_body);
-    delwin(error_win);
-    clear();   // Clear the screen
-    refresh(); // Refresh to update the display
-
-    // Switch to the next screen in the event manager (personal patient registration screen)
-    EventManager &eventManager = EventManager::getInstance();
-    eventManager.switchScreen(Screen::RegistrationPersonalPatientScreen);
+    navigationHandler(form, fields, windows, Screen::RegistrationPersonalPatientScreen);
 }
 
 void renderRegistrationPersonalPatientScreen()
@@ -731,6 +752,8 @@ void renderRegistrationPersonalPatientScreen()
     WINDOW *error_win = newwin(error_win_height, error_win_width, error_win_y, error_win_x);
     wbkgd(error_win, COLOR_PAIR(colorScheme.danger)); // Set background color for error messages
 
+    std::vector<WINDOW *> windows = {win_body, win_form, error_win};
+
     // Input loop to process the form and handle validation
     bool done = false;
     int ch;
@@ -748,9 +771,11 @@ void renderRegistrationPersonalPatientScreen()
                 win_form,
                 win_body,
                 [&]()
-                { exitHandler(); },
+                { exitHandler(form, fields, windows); },
                 [&]()
-                { navigationHandler(form, fields, win_form, win_body, Screen::RegistrationAccountPatientScreen); });
+                {
+                    navigationHandler(form, fields, windows, Screen::RegistrationAccountPatientScreen);
+                });
         }
 
         // Validate the form when 'Enter' is pressed
@@ -801,26 +826,9 @@ void renderRegistrationPersonalPatientScreen()
     reg.emergencyContactNumber = trim_whitespaces(field_buffer(fields[9], 0));
     reg.emergencyContactName = trim_whitespaces(field_buffer(fields[11], 0));
 
-    // Clean up resources by unposting the form and freeing memory
-    unpost_form(form);
-    free_form(form);
-    for (int i = 0; fields[i]; i++)
-    {
-        free_field(fields[i]);
-    }
-    wclear(win_form);
-    wclear(win_body);
-    delwin(win_form);
-    delwin(win_body);
-    delwin(error_win);
-    clear();   // Clear the screen
-    refresh(); // Refresh the screen
-
-    // Update event manager and switch to the Admission screen
-    EventManager &eventManager = EventManager::getInstance();
     Admission &a = Admission::getInstance();
-    a.prevScreen = Screen::RegistrationSelectionPatientScreen; // Save the previous screen
-    eventManager.switchScreen(Screen::Admission);              // Switch to the Admission screen
+    a.prevScreen = Screen::RegistrationSelectionPatientScreen;
+    navigationHandler(form, fields, windows, Screen::Admission);
 }
 
 void renderRegistrationSelectionPatientScreen()
@@ -933,7 +941,8 @@ void renderRegistrationSelectionPatientScreen()
             done = true;
             break;
         case 2: // Custom key for "Back"
-            navigationHandler(nullptr, nullptr, win_form, win_body, Screen::RegistrationPersonalPatientScreen);
+            std::vector<WINDOW *> windows = {win_body, win_form};
+            navigationHandler(nullptr, nullptr, windows, Screen::RegistrationPersonalPatientScreen);
             break;
         }
     }
@@ -947,8 +956,9 @@ void renderRegistrationSelectionPatientScreen()
         std::this_thread::sleep_for(std::chrono::seconds(2));
         werase(status_win);
         wrefresh(status_win);
-        reg.reset();                                                               // Reset registration data
-        navigationHandler(nullptr, nullptr, win_form, win_body, Screen::Database); // Redirect to database screen
+        reg.reset();
+        std::vector<WINDOW *> windows = {win_body, win_form};
+        navigationHandler(nullptr, nullptr, windows, Screen::Database);
     }
     else
     {
@@ -1126,6 +1136,8 @@ void renderRegistrationScreenAdmin()
     WINDOW *status_win = newwin(status_win_height, status_win_width, status_win_y, status_win_x);
     box(status_win, 0, 0);
 
+    std::vector<WINDOW *> windows = {win_body, win_form, status_win};
+
     // Input loop
     bool done = false;
     int ch;
@@ -1141,11 +1153,11 @@ void renderRegistrationScreenAdmin()
                 win_form,
                 win_body,
                 [&]()
-                { exitHandler(); },
+                { exitHandler(form, fields, windows); },
                 [&]()
                 {
                     reg.reset(); // Reset the form
-                    navigationHandler(form, fields, win_form, win_body, Screen::Database);
+                    navigationHandler(form, fields, windows, Screen::Database);
                 });
         }
         form_driver(form, REQ_VALIDATION); // Validate the form
@@ -1194,8 +1206,8 @@ void renderRegistrationScreenAdmin()
         std::this_thread::sleep_for(std::chrono::seconds(3)); // Show status message for 3 seconds
         werase(status_win);
         wrefresh(status_win);
-        reg.reset();                                                           // Reset the registration data
-        navigationHandler(form, fields, win_form, win_body, Screen::Database); // Redirect to database screen
+        reg.reset();                                                // Reset the registration data
+        navigationHandler(form, fields, windows, Screen::Database); // Redirect to database screen
     }
     else
     {
@@ -1240,12 +1252,11 @@ void handleDashboardOptions()
 // Renders the dashboard screen, handles user input for navigation, and displays the main menu options.
 void renderDashboardScreen()
 {
-    Color &colorScheme = Color::getInstance();                // Get the color scheme for UI elements.
-    EventManager &eventManager = EventManager::getInstance(); // Event manager for screen transitions.
-    UserManager &userManager = UserManager::getInstance();    // User manager for getting user data.
-    Dashboard &dash = Dashboard::getInstance();               // Dashboard instance to manage the current state.
-    auto currentUser = userManager.getCurrentUser();          // Get the current logged-in user.
-    bkgd(COLOR_PAIR(colorScheme.primary));                    // Set the background color for the screen.
+    Color &colorScheme = Color::getInstance();             // Get the color scheme for UI elements.
+    UserManager &userManager = UserManager::getInstance(); // User manager for getting user data.
+    Dashboard &dash = Dashboard::getInstance();            // Dashboard instance to manage the current state.
+    auto currentUser = userManager.getCurrentUser();       // Get the current logged-in user.
+    bkgd(COLOR_PAIR(colorScheme.primary));                 // Set the background color for the screen.
 
     std::string header = "Dashboard";                                                    // Set the header text for the screen.
     std::string currentlyLoggedUser = "Currently logged in as " + currentUser->username; // Display the logged-in user's name.
@@ -1282,6 +1293,8 @@ void renderDashboardScreen()
     wbkgd(win_form, COLOR_PAIR(colorScheme.primary)); // Set the background color for win_form.
     box(win_form, 0, 0);                              // Draw a box around the inner window.
     wrefresh(win_form);                               // Refresh win_form to show the box.
+
+    std::vector<WINDOW *> windows = {win_body, win_form};
 
     bool done = false;      // Loop control flag.
     keypad(win_form, TRUE); // Enable keypad input for win_form.
@@ -1337,16 +1350,10 @@ void renderDashboardScreen()
             done = true;
             break;
         case 27: // If the user presses ESC, exit the application.
-            exitHandler();
+            exitHandler(nullptr, nullptr, windows);
             break;
-        case 2:                                       // If the user presses the 'Back' key (Ctrl+B), navigate back to the login screen.
-            wclear(win_form);                         // Clear the form.
-            wclear(win_body);                         // Clear the body window.
-            delwin(win_form);                         // Delete the form window.
-            delwin(win_body);                         // Delete the body window.
-            clear();                                  // Clear the screen.
-            refresh();                                // Refresh the screen.
-            eventManager.switchScreen(Screen::Login); // Switch to the login screen.
+        case 2:
+            navigationHandler(nullptr, nullptr, windows, Screen::Login);
             break;
         }
     }
@@ -1364,12 +1371,12 @@ void renderDashboardScreen()
 void handleDatabaseControls(WINDOW *win_form, WINDOW *win_body)
 {
     // Retrieve instances of essential objects for handling the database logic.
-    UserManager &userManager = UserManager::getInstance();    // Manages user data and actions.
-    EventManager &eventManager = EventManager::getInstance(); // Handles screen transitions.
-    Profile &p = Profile::getInstance();                      // Profile management for individual users.
-    Database &db = Database::getInstance();                   // Database management for record retrieval and filtering.
-    UpdatePatient &up = UpdatePatient::getInstance();         // Handles updating patient data.
-    UpdateAdmin &ua = UpdateAdmin::getInstance();             // Handles updating admin data.
+    UserManager &userManager = UserManager::getInstance(); // Manages user data and actions.
+    Profile &p = Profile::getInstance();                   // Profile management for individual users.
+    Database &db = Database::getInstance();                // Database management for record retrieval and filtering.
+    UpdatePatient &up = UpdatePatient::getInstance();      // Handles updating patient data.
+    UpdateAdmin &ua = UpdateAdmin::getInstance();          // Handles updating admin data.
+    std::vector<WINDOW *> windows = {win_body, win_form};
 
     // If there are no records to interact with, exit early.
     if (db.listMatrixCurrent.empty())
@@ -1379,12 +1386,6 @@ void handleDatabaseControls(WINDOW *win_form, WINDOW *win_body)
     switch (db.selectedCol)
     {
     case 1: // Profile action (View Profile)
-        // Clear the current window and prepare for the next screen.
-        wclear(win_form);
-        wclear(win_body);
-        delwin(win_form);
-        delwin(win_body);
-
         // Get the user ID from the selected record and fetch the corresponding user details.
         p.user = userManager.getUserById(db.listMatrixCurrent[db.selectedRow][db.listMatrixCurrent[db.selectedRow].size() - 1]);
 
@@ -1392,16 +1393,10 @@ void handleDatabaseControls(WINDOW *win_form, WINDOW *win_body)
         p.prevScreen = Screen::Database;
 
         // Switch to the Profile screen for viewing detailed user information.
-        eventManager.switchScreen(Screen::Profile);
+        navigationHandler(nullptr, nullptr, windows, Screen::Profile);
         break;
 
     case 2: // Update action (Edit Profile)
-        // Clear the current window and prepare for the next screen.
-        wclear(win_form);
-        wclear(win_body);
-        delwin(win_form);
-        delwin(win_body);
-
         // Handle updates for patient and admin records differently.
         if (db.currentFilter == Database::Filter::patient)
         {
@@ -1410,7 +1405,7 @@ void handleDatabaseControls(WINDOW *win_form, WINDOW *win_body)
             up.populateValues(std::dynamic_pointer_cast<Patient>(up.user));
 
             // Switch to the screen for updating patient information.
-            eventManager.switchScreen(Screen::UpdateAccountPatientScreen);
+            navigationHandler(nullptr, nullptr, windows, Screen::UpdateAccountPatientScreen);
         }
         else
         {
@@ -1419,7 +1414,7 @@ void handleDatabaseControls(WINDOW *win_form, WINDOW *win_body)
             ua.populateValues(std::dynamic_pointer_cast<Admin>(ua.user));
 
             // Switch to the screen for updating admin information.
-            eventManager.switchScreen(Screen::UpdateAdminScreen);
+            navigationHandler(nullptr, nullptr, windows, Screen::UpdateAdminScreen);
         }
         break;
 
@@ -1465,10 +1460,9 @@ void handleDatabaseControls(WINDOW *win_form, WINDOW *win_body)
 // Renders the database screen, displays records, handles search, and navigation.
 void renderDatabaseScreen()
 {
-    Color &colorScheme = Color::getInstance();                // Get the color scheme for UI elements.
-    EventManager &eventManager = EventManager::getInstance(); // Event manager to handle screen transitions.
-    UserManager &userManager = UserManager::getInstance();    // User manager to handle users and their records.
-    Database &db = Database::getInstance();                   // Database instance to manage and display records.
+    Color &colorScheme = Color::getInstance();             // Get the color scheme for UI elements.
+    UserManager &userManager = UserManager::getInstance(); // User manager to handle users and their records.
+    Database &db = Database::getInstance();                // Database instance to manage and display records.
 
     renderHeader();      // Render the screen header.
     renderControlInfo(); // Render control information (help, instructions, etc.).
@@ -1511,6 +1505,8 @@ void renderDatabaseScreen()
 
     // Set the list to display based on the current filter (patient/admin).
     db.listMatrixCurrent = db.currentFilter == Database::Filter::patient ? db.getCurrentPagePatient() : db.getCurrentPageAdmin();
+
+    std::vector<WINDOW *> windows = {win_body, win_form};
 
     bool done = false;      // Flag to control the loop.
     keypad(win_form, TRUE); // Enable keypad input for win_form.
@@ -1671,7 +1667,7 @@ void renderDatabaseScreen()
             }
             break;
         case 27: // If ESC is pressed, exit.
-            exitHandler();
+            exitHandler(nullptr, nullptr, windows);
             done = true;
             break;
         case 2: // Custom key for "Back" action.
@@ -1680,21 +1676,16 @@ void renderDatabaseScreen()
         }
     }
 
-    // Cleanup before switching screens.
-    wclear(win_form);
-    wclear(win_body);
-    delwin(win_form);
-    delwin(win_body);
-
     // Switch to the appropriate screen based on the action.
+    Screen screen = db.currentFilter == Database::Filter::patient ? Screen::RegistrationAccountPatientScreen : Screen::RegisterAdmin;
     switch (ch)
     {
     case '+':
-        db.currentFilter == Database::Filter::patient ? eventManager.switchScreen(Screen::RegistrationAccountPatientScreen) : eventManager.switchScreen(Screen::RegisterAdmin);
+        navigationHandler(nullptr, nullptr, windows, screen);
         break;
     default:
         db.reset();
-        eventManager.switchScreen(Screen::Dashboard);
+        navigationHandler(nullptr, nullptr, windows, Screen::Dashboard);
         break;
     }
 }
@@ -1703,7 +1694,6 @@ void renderProfileAdmissionsScreen()
 {
     // Get instances for managing colors, events, and profile data
     Color &colorScheme = Color::getInstance();
-    EventManager &eventManager = EventManager::getInstance();
     Profile &p = Profile::getInstance();
 
     // Render the header and control info at the top of the screen
@@ -1749,6 +1739,8 @@ void renderProfileAdmissionsScreen()
     // Generate the list of admissions for the patient based on the current search query
     p.generateListMatrix(p.search(p.searchQuery, patient->admissions));
     p.listMatrix = p.getCurrentPage();
+
+    std::vector<WINDOW *> windows = {win_body, win_form};
 
     int ch; // Variable to store the user input
 
@@ -1896,7 +1888,7 @@ void renderProfileAdmissionsScreen()
             }
             break;
         case 27: // ESC to exit
-            exitHandler();
+            exitHandler(nullptr, nullptr, windows);
             done = true;
             break;
         case 2: // Custom key for "Back"
@@ -1905,23 +1897,17 @@ void renderProfileAdmissionsScreen()
         }
     }
 
-    // Clear and delete windows before switching screens
-    wclear(win_form);
-    wclear(win_body);
-    delwin(win_form);
-    delwin(win_body);
-
     // Reset profile data and handle screen transition
     p.reset();
     if (ch == '+')
     {
         Admission &a = Admission::getInstance();
         a.prevScreen = Screen::ProfileAdmissions;
-        eventManager.switchScreen(Screen::Admission);
+        navigationHandler(nullptr, nullptr, windows, Screen::Admission);
     }
     else
     {
-        eventManager.switchScreen(Screen::Profile);
+        navigationHandler(nullptr, nullptr, windows, Screen::Profile);
     }
 }
 
@@ -1929,7 +1915,6 @@ void renderProfileScreen()
 {
     // Accessing singleton instances of Color, EventManager, and Profile
     Color &colorScheme = Color::getInstance();
-    EventManager &eventManager = EventManager::getInstance();
     Profile &p = Profile::getInstance();
 
     // Render the header and control information (e.g., navigation tips)
@@ -2012,6 +1997,8 @@ void renderProfileScreen()
         wrefresh(win_form);
         wrefresh(win_body);
 
+        std::vector<WINDOW *> windows = {win_body, win_form};
+
         // Enter the input loop
         while (true)
         {
@@ -2022,21 +2009,15 @@ void renderProfileScreen()
             case 2: // Handle 'Back' key (Ctrl+B)
                 p.reset();
                 // Navigate back to the previous screen
-                navigationHandler(nullptr, nullptr, win_form, win_body, p.prevScreen);
+                navigationHandler(nullptr, nullptr, windows, p.prevScreen);
                 return;
             case 27: // Handle ESC key
                 // Exit the program or screen
-                exitHandler();
+                exitHandler(nullptr, nullptr, windows);
                 return;
             case 9: // Handle TAB key
-                // Clear current window and navigate to the admissions screen
-                wclear(win_form);
-                wclear(win_body);
-                wrefresh(win_form);
-                wrefresh(win_body);
-                delwin(win_form);
-                delwin(win_body);
-                eventManager.switchScreen(Screen::ProfileAdmissions);
+                // Clear current window and navigate to the profile admissions screen
+                navigationHandler(nullptr, nullptr, windows, Screen::ProfileAdmissions);
                 return;
             }
         }
@@ -2099,6 +2080,8 @@ void renderProfileScreen()
         wrefresh(win_form);
         wrefresh(win_body);
 
+        std::vector<WINDOW *> windows = {win_body, win_form};
+
         // Enter the input loop for admin profile
         while (true)
         {
@@ -2108,13 +2091,13 @@ void renderProfileScreen()
             {
                 p.reset();
                 // Navigate back to the previous screen
-                navigationHandler(nullptr, nullptr, win_form, win_body, p.prevScreen);
+                navigationHandler(nullptr, nullptr, windows, p.prevScreen);
                 break;
             }
             else if (ch == 27) // Handle ESC key
             {
                 // Exit the program or screen
-                exitHandler();
+                exitHandler(nullptr, nullptr, windows);
             }
             else
             {
@@ -2128,7 +2111,6 @@ void renderAdmissionScreen()
 {
     // Accessing singleton instances of Color, EventManager, and Admission
     Color &colorScheme = Color::getInstance();
-    EventManager &eventManager = EventManager::getInstance();
     Admission &a = Admission::getInstance();
 
     // Render the header and control information (e.g., navigation tips)
@@ -2175,6 +2157,8 @@ void renderAdmissionScreen()
     // Initialize the list of departments (search query and pagination)
     a.generateList(a.search(a.searchQuery));
     a.list = a.getCurrentPage();
+
+    std::vector<WINDOW *> windows = {win_body, win_form};
 
     // Main loop for rendering the admission screen
     while (!done)
@@ -2296,7 +2280,7 @@ void renderAdmissionScreen()
             }
             break;
         case 27: // Handle "ESC" key to exit
-            exitHandler();
+            exitHandler(nullptr, nullptr, windows);
             done = true;
             break;
         case 2: // Custom key for "Back"
@@ -2304,12 +2288,6 @@ void renderAdmissionScreen()
             break;
         }
     }
-
-    // Clean up windows before leaving the screen
-    wclear(win_form);
-    wclear(win_body);
-    delwin(win_form);
-    delwin(win_body);
 
     // If we are returning to the Profile screen, add the selected department to the patient's admissions
     if (a.prevScreen == Screen::ProfileAdmissions)
@@ -2321,7 +2299,7 @@ void renderAdmissionScreen()
 
     // Reset the admission state and navigate back to the previous screen
     a.reset();
-    eventManager.switchScreen(a.prevScreen);
+    navigationHandler(nullptr, nullptr, windows, a.prevScreen);
 }
 
 void renderUpdateAccountPatientScreen()
@@ -2432,6 +2410,8 @@ void renderUpdateAccountPatientScreen()
     WINDOW *error_win = newwin(error_win_height, error_win_width, error_win_y, error_win_x);
     wbkgd(error_win, COLOR_PAIR(colorScheme.danger));
 
+    std::vector<WINDOW *> windows = {win_body, win_form, error_win};
+
     // Input loop for form submission
     bool done = false;
     int ch;
@@ -2448,11 +2428,11 @@ void renderUpdateAccountPatientScreen()
                 win_form,
                 win_body,
                 [&]()
-                { exitHandler(); },
+                { exitHandler(form, fields, windows); },
                 [&]()
                 {
                     u.reset();
-                    navigationHandler(form, fields, win_form, win_body, Screen::Database);
+                    navigationHandler(form, fields, windows, Screen::Database);
                 });
         }
 
@@ -2499,28 +2479,7 @@ void renderUpdateAccountPatientScreen()
     u.fieldValues["address"].second = trim_whitespaces(field_buffer(fields[7], 0));
     u.fieldValues["contactNumber"].second = trim_whitespaces(field_buffer(fields[9], 0));
 
-    // Clean up: remove form and free resources
-    unpost_form(form);
-    free_form(form);
-    for (int i = 0; fields[i]; i++)
-    {
-        free_field(fields[i]);
-    }
-
-    // Clear and delete the form and error windows
-    wclear(win_form);
-    wclear(win_body);
-    delwin(win_form);
-    delwin(win_body);
-    delwin(error_win);
-
-    // Clear screen and refresh for the next screen
-    clear();
-    refresh();
-
-    // Switch to the next screen (UpdatePersonalPatientScreen)
-    EventManager &eventManager = EventManager::getInstance();
-    eventManager.switchScreen(Screen::UpdatePersonalPatientScreen);
+    navigationHandler(form, fields, windows, Screen::UpdatePersonalPatientScreen);
 }
 
 void renderUpdatePersonalPatientScreen()
@@ -2637,6 +2596,8 @@ void renderUpdatePersonalPatientScreen()
     WINDOW *error_win = newwin(error_win_height, error_win_width, error_win_y, error_win_x);
     wbkgd(error_win, COLOR_PAIR(colorScheme.danger)); // Set background color for error messages
 
+    std::vector<WINDOW *> windows = {win_body, win_form, error_win};
+
     // Input handling loop: validate input until all fields are filled
     bool done = false;
     int ch;
@@ -2652,9 +2613,11 @@ void renderUpdatePersonalPatientScreen()
                 win_form, // Window where form is displayed
                 win_body, // Outer window
                 [&]()
-                { exitHandler(); }, // Exit handler
+                { exitHandler(form, fields, windows); }, // Exit handler
                 [&]()
-                { navigationHandler(form, fields, win_form, win_body, Screen::UpdateAccountPatientScreen); }); // Navigation handler
+                {
+                    navigationHandler(form, fields, windows, Screen::UpdateAccountPatientScreen);
+                }); // Navigation handler
         }
         form_driver(form, REQ_VALIDATION); // Validate the form on pressing Enter
 
@@ -2702,24 +2665,7 @@ void renderUpdatePersonalPatientScreen()
     u.fieldValues["emergencyContactNumber"].second = trim_whitespaces(field_buffer(fields[9], 0));
     u.fieldValues["emergencyContactName"].second = trim_whitespaces(field_buffer(fields[11], 0));
 
-    // Clean up resources: unpost form and free memory
-    unpost_form(form);
-    free_form(form);
-    for (int i = 0; fields[i]; i++)
-    {
-        free_field(fields[i]);
-    }
-    wclear(win_form);  // Clear form window content
-    wclear(win_body);  // Clear outer window content
-    delwin(win_form);  // Delete form window
-    delwin(win_body);  // Delete outer window
-    delwin(error_win); // Delete error message window
-    clear();           // Clear screen content
-    refresh();         // Refresh the screen
-
-    // Switch to the next screen after form submission
-    EventManager &eventManager = EventManager::getInstance();
-    eventManager.switchScreen(Screen::UpdateSelectionPatientScreen);
+    navigationHandler(form, fields, windows, Screen::UpdateSelectionPatientScreen);
 }
 
 void renderUpdateSelectionPatientScreen()
@@ -2793,6 +2739,8 @@ void renderUpdateSelectionPatientScreen()
         }
     }
 
+    std::vector<WINDOW *> windows = {win_body, win_form};
+
     while (!done)
     {
         // Clear win_form and redraw its border each loop iteration
@@ -2849,15 +2797,16 @@ void renderUpdateSelectionPatientScreen()
             done = true;
             break;
         case 2: // Custom key for "Back"
-            navigationHandler(nullptr, nullptr, win_form, win_body, Screen::UpdatePersonalPatientScreen);
+            navigationHandler(nullptr, nullptr, windows, Screen::UpdatePersonalPatientScreen);
             break;
         }
     }
 
-    u.handleUpdatePatient(patient->getId());                                   // Handle patient update with ID
-    reg.reset();                                                               // Reset the registration process
-    u.reset();                                                                 // Reset the update process
-    navigationHandler(nullptr, nullptr, win_form, win_body, Screen::Database); // Navigate to Database screen
+    u.handleUpdatePatient(patient->getId()); // Handle patient update with ID
+    reg.reset();                             // Reset the registration process
+    u.reset();                               // Reset the update process
+
+    navigationHandler(nullptr, nullptr, windows, Screen::Database); // Navigate to Database screen
 }
 
 void renderUpdateAdminScreen()
@@ -2981,14 +2930,16 @@ void renderUpdateAdminScreen()
     bool done = false;
     int ch;
 
+    std::vector<WINDOW *> windows = {win_body, win_form};
+
     // Loop to handle user input
     while (!done)
     {
         while ((ch = getch()) != '\n') // Wait for 'Enter' key to submit
         {
             driver_form(ch, form, fields, win_form, win_body, [&]()
-                        { exitHandler(); }, [&]()
-                        { u.reset(); navigationHandler(form, fields, win_form, win_body, Screen::Database); });
+                        { exitHandler(form, fields, windows); }, [&]()
+                        { u.reset(); navigationHandler(form, fields, windows, Screen::Database); });
         }
 
         form_driver(form, REQ_VALIDATION); // Validate form fields
@@ -3031,6 +2982,6 @@ void renderUpdateAdminScreen()
     // Perform the update action with the extracted data
     u.handleUpdateAdmin(admin->getId());
 
-    u.reset();                                                                 // Reset any temporary data
-    navigationHandler(nullptr, nullptr, win_form, win_body, Screen::Database); // Navigate back to the database screen
+    u.reset();                                                      // Reset any temporary data
+    navigationHandler(nullptr, nullptr, windows, Screen::Database); // Navigate back to the database screen
 }

@@ -803,10 +803,10 @@ void clearScreen();
 void initializeColors();
 
 // Handles the exit logic, such as saving data or performing clean-up tasks when the program ends.
-void exitHandler();
+void exitHandler(FORM *form, FIELD **fields, std::vector<WINDOW *> &windows);
 
-// Handles the navigation logic for forms during registration or update, including validation and switching between screens.
-void navigationHandler(FORM *form, FIELD **fields, WINDOW *win_form, WINDOW *win_body, Screen screen);
+// Handles the navigation logic for forms during registration or update, including validation, clean-up tasks, and switching between screens.
+void navigationHandler(FORM *form, FIELD **fields, std::vector<WINDOW *> &windows, Screen screen);
 
 // Validates the form fields to ensure the user input is correct before submission.
 bool validateFields(FIELD **fields);
