@@ -578,10 +578,20 @@ struct Database
     // Function to generate the admin record matrix with action buttons
     void generateListMatrixAdmin(const std::vector<std::pair<std::string, std::string>> &records)
     {
+        UserManager &userManager = UserManager::getInstance();
+        auto currentUser = userManager.getCurrentUser();
+
         listMatrixAdmin.clear();
         for (const auto &record : records)
         {
-            listMatrixAdmin.push_back({record.first, "[View]", "[Update]", "[Delete]", record.second});
+            if (record.second == currentUser->getId())
+            {
+                listMatrixAdmin.push_back({record.first + " (me)", "[View]", "[Update]", "[Delete]", record.second});
+            }
+            else
+            {
+                listMatrixAdmin.push_back({record.first, "[View]", "[Update]", "[Delete]", record.second});
+            }
         }
         totalPagesAdmin = listMatrixAdmin.empty() ? 0 : (listMatrixAdmin.size() - 1) / pageSize + 1;
     }

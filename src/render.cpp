@@ -1382,12 +1382,15 @@ void handleDatabaseControls(WINDOW *win_form, WINDOW *win_body)
     if (db.listMatrixCurrent.empty())
         return;
 
+    auto userId = db.listMatrixCurrent[db.selectedRow][db.listMatrixCurrent[db.selectedRow].size() - 1];
+    auto currentUser = userManager.getCurrentUser();
+
     // Switch between different actions based on the selected column in the current row.
     switch (db.selectedCol)
     {
     case 1: // Profile action (View Profile)
         // Get the user ID from the selected record and fetch the corresponding user details.
-        p.user = userManager.getUserById(db.listMatrixCurrent[db.selectedRow][db.listMatrixCurrent[db.selectedRow].size() - 1]);
+        p.user = userManager.getUserById(userId);
 
         // Store the previous screen (database screen) for future navigation.
         p.prevScreen = Screen::Database;
@@ -1401,7 +1404,7 @@ void handleDatabaseControls(WINDOW *win_form, WINDOW *win_body)
         if (db.currentFilter == Database::Filter::patient)
         {
             // Populate the update form for the selected patient user.
-            up.user = userManager.getUserById(db.listMatrixCurrent[db.selectedRow][db.listMatrixCurrent[db.selectedRow].size() - 1]);
+            up.user = userManager.getUserById(userId);
             up.populateValues(std::dynamic_pointer_cast<Patient>(up.user));
 
             // Switch to the screen for updating patient information.
@@ -1410,7 +1413,7 @@ void handleDatabaseControls(WINDOW *win_form, WINDOW *win_body)
         else
         {
             // Populate the update form for the selected admin user.
-            ua.user = userManager.getUserById(db.listMatrixCurrent[db.selectedRow][db.listMatrixCurrent[db.selectedRow].size() - 1]);
+            ua.user = userManager.getUserById(userId);
             ua.populateValues(std::dynamic_pointer_cast<Admin>(ua.user));
 
             // Switch to the screen for updating admin information.
@@ -1419,9 +1422,11 @@ void handleDatabaseControls(WINDOW *win_form, WINDOW *win_body)
         break;
 
     case 3: // Delete action (Delete User)
-        // Get the ID of the selected user and delete them from the database.
-        userManager.deleteUserById(db.listMatrixCurrent[db.selectedRow][db.listMatrixCurrent[db.selectedRow].size() - 1]);
+        // Prevent deleting self from list
+        if (currentUser->getId() == userId)
+            break;
 
+        userManager.deleteUserById(userId);
         // Refresh the list of records after deletion to reflect the changes.
         if (db.currentFilter == Database::Filter::patient)
         {
@@ -1623,6 +1628,7 @@ void renderDatabaseScreen()
             if (db.selectedRow < static_cast<int>(db.listMatrixCurrent.size() - 1))
                 db.selectedRow++;
             break;
+
         case KEY_UP: // Move selection up.
             if (db.selectedRow > -1)
                 db.selectedRow--;
@@ -1652,6 +1658,8 @@ void renderDatabaseScreen()
             {
                 db.currentPage--;
                 db.listMatrixCurrent = db.currentFilter == Database::Filter::patient ? db.getCurrentPagePatient() : db.getCurrentPageAdmin();
+                db.selectedRow = -1;
+                db.selectedCol = 1;
             }
             break;
         case KEY_NPAGE: // Handle page down action.
@@ -1659,11 +1667,15 @@ void renderDatabaseScreen()
             {
                 db.currentPage++;
                 db.listMatrixCurrent = db.getCurrentPagePatient();
+                db.selectedRow = -1;
+                db.selectedCol = 1;
             }
             else if (db.currentFilter == Database::Filter::admin && db.currentPage + 1 < db.totalPagesAdmin)
             {
                 db.currentPage++;
                 db.listMatrixCurrent = db.getCurrentPageAdmin();
+                db.selectedRow = -1;
+                db.selectedCol = 1;
             }
             break;
         case 27: // If ESC is pressed, exit.
@@ -1681,6 +1693,7 @@ void renderDatabaseScreen()
     switch (ch)
     {
     case '+':
+        db.searchQuery = "";
         navigationHandler(nullptr, nullptr, windows, screen);
         break;
     default:
@@ -1877,6 +1890,8 @@ void renderProfileAdmissionsScreen()
                 p.currentPage--;
                 p.generateListMatrix(p.search(p.searchQuery, patient->admissions));
                 p.listMatrix = p.getCurrentPage();
+                p.selectedRow = -1;
+                p.selectedCol = 1;
             }
             break;
         case KEY_NPAGE: // Page Down key
@@ -1885,6 +1900,8 @@ void renderProfileAdmissionsScreen()
                 p.currentPage++;
                 p.generateListMatrix(p.search(p.searchQuery, patient->admissions));
                 p.listMatrix = p.getCurrentPage();
+                p.selectedRow = -1;
+                p.selectedCol = 1;
             }
             break;
         case 27: // ESC to exit
@@ -2269,6 +2286,7 @@ void renderAdmissionScreen()
                 a.currentPage--;
                 a.generateList(a.search(a.searchQuery)); // Ensure list is refreshed
                 a.list = a.getCurrentPage();
+                a.selectedRow = -1;
             }
             break;
         case KEY_NPAGE: // Handle "Page Down" key (navigate down a page)
@@ -2277,6 +2295,7 @@ void renderAdmissionScreen()
                 a.currentPage++;
                 a.generateList(a.search(a.searchQuery)); // Ensure list is refreshed
                 a.list = a.getCurrentPage();
+                a.selectedRow = -1;
             }
             break;
         case 27: // Handle "ESC" key to exit
