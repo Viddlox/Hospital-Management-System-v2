@@ -128,7 +128,7 @@ MedTek+ Hospital Management System is a **terminal-based application** built for
 
 📝 License
 
-This project is licensed under the MIT License. See the LICENSE file for more details.
+This project is licensed under the MIT License. See the [LICENSE](license.txt) file for details.
 
 ---
 
