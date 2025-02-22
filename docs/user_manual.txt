@@ -1,0 +1,222 @@
+=================================================
+ MedTek+ Hospital Management System - User Manual
+=================================================
+
+TABLE OF CONTENTS
+-------------------------------------------------
+1. INTRODUCTION
+2. SYSTEM REQUIREMENTS
+3. INSTALLATION
+4. CONTROLS AND KEY-BINDINGS
+5. USER JOURNEY OVERVIEW
+6. DATA VALIDATION RULES
+
+1. INTRODUCTION
+-------------------------------------------------
+MedTek+ Hospital Management System is a terminal-based application designed to streamline hospital administration. 
+It enables hospital staff to efficiently manage patient and admin records using an interactive text-based interface. 
+The system supports CRUD (Create, Read, Update, Delete) operations, a paginated search system, and local file storage using JSON. 
+The interface is built using ncurses for navigation and rendering.
+
+2. SYSTEM REQUIREMENTS
+--------------------------------------------------
+Operating System: Linux (Recommended)
+- Compiler: g++ (with C++17 support)
+- Dependencies: ncursesw, nlohmann-json, uuidv4
+- Storage: Local file system (JSON-based records)
+
+3. INSTALLATION
+-------------------------------------------------
+
+Windows Installation Using WSL (Recommended)
+
+	1. Ensure WSL is enabled and installed (if not):
+		a. Open PowerShell as Administrator and run:
+
+		```
+		wsl --install
+		```
+		b. Restart your computer when prompted.
+
+	2. Ensure Ubuntu is installed (if not):
+		a. Open the Microsoft Store and search for "Ubuntu".
+		b. Click "Install" and wait for the installation to complete.
+	
+	3. Open Ubuntu (from the Start menu) and install required packages:
+
+		```
+		sudo apt update && sudo apt upgrade -y
+		sudo apt install g++ make libncursesw5-dev libformw5-dev libmenuw5-dev uuid-dev
+		```
+
+	4. Clone the repository:
+
+		```
+		https://github.com/Viddlox/Hospital-Management-System-v2.git
+		```
+
+	5. Compile the program:
+		```
+		make re
+		```
+
+	6. Run the executable:
+		```
+		./Hospital_Management_System.exe
+		```
+
+4. CONTROLS AND KEY-BINDINGS:
+-------------------------------------------------
+
+a. KEY_DOWN - Move selection down
+
+b. KEY_UP - Move selection up
+
+c. KEY_LEFT - Move left across columns
+
+d. KEY_RIGHT - Move right across columns
+
+e. Enter - Select an item / Confirm an action
+
+f. + - Create a new record in current screen if applicable (e.g. create a new patient/admin, create a new patient admission record)
+
+g. Tab - Toggle between filters (e.g. patient or admin database, patient profile or patient admissions)
+
+h. PgUp - Page up (previous records)
+
+i. PgDn - Page down (next records)
+
+j. ESC / CTRL + C - Exit application
+
+k. CTRL + B - Go back to the previous screen
+
+5. USER JOURNEY OVERVIEW
+-------------------------------------------------
+
+a. LOGIN SCREEN
+   - Users must enter their credentials to access the system.
+   - Admin users have permissions to manage other admin accounts and patient records.
+   - Invalid credentials result in an error message.
+
+b. DASHBOARD SCREEN
+   - Displays navigation options for managing records, profile overview, and logging out.
+
+c. PROFILE SCREEN
+   - Displays the current user’s information.
+   
+d. DATABASE SCREEN
+   - Users can navigate through patient and admin records.
+   - The system supports paginated searches for efficient record retrieval.
+   - Users can perform the following operations:
+     
+     i.  ADD A PATIENT RECORD
+		- Enter patient details including name, age, medical history, and emergency contacts.
+		- The system generates a unique ID for each patient.
+
+		EXAMPLE:
+		
+		1. Ensure you are viewing the patient database (press TAB to switch between admin/patient database).
+		2. Press + on the keyboard to initiate patient registration.
+		3. In the first section (Account Information), fill all the form fields (Arrow Keys to navigate, keyboard input to type, Enter to proceed).
+		4. In the second section (Personal Information), fill all the form fields (Arrow Keys to navigate, keyboard input to type, Enter to proceed).
+		5. In the third section (Admissions), select a medical department for patient admission.
+			a. Arrow keys to move between entries.
+			b. keyboard input to type in first row (Search bar).
+			c. PgUp/PgDn to navigate between pages.
+			d. Enter to select medical department.
+		6. In the fourth section (Personal Information Continued), select the choices from each menu (e.g Race: Malay, Chinese, Indian, Other).
+			a. Arrow keys to move between menus and their respective choices.
+			b. Enter to confirm submission.
+		7. Upon successful registration, you will be redirected back to the database screen.
+     
+     ii. VIEW A PATIENT RECORD
+		- Select a patient from the list to view their profile details and admissions history.
+		- In the admission history section, admissions are ordered by their creation date.
+
+		EXAMPLE (Admissions section):
+
+		1. Ensure you are viewing the patient admissions history section (press TAB to switch between viewing patient profile details and admission history).
+		2. Explore a patient's admission history:
+			a. Arrow keys to move between entries.
+			b. keyboard input to type in first row (search bar).
+			c. PgUp/PgDn to navigate between pages.
+			d. Delete an entry by pressing enter on a selected entry's delete button. 
+		3. Create an entry by pressing +, where you will be redirected to the Admissions screen.
+		4. In the admissions screen:
+			a. Arrow keys to move between entries.
+			b. keyboard input to type in first row (search bar).
+			c. PgUp/PgDn to navigate between pages.
+			d. Enter to select medical department for admission.
+     
+     iii. UPDATE A PATIENT RECORD
+		- Modify patient information and save changes.
+
+		EXAMPLE:
+
+		1. Ensure you are viewing the patient database (press TAB to switch between admin/patient database).
+		2. Select a patient record to update using Arrow Keys and press Enter.
+		3. Update all existing fields following the same process as adding a patient record (see ADD A PATIENT RECORD, EXAMPLE for more info).
+     
+     iv. DELETE A PATIENT RECORD
+		- Removes a patient from the system.
+
+		EXAMPLE:
+
+		1. Ensure you are viewing the patient database (press TAB to switch between admin/patient database).
+		2. Select a patient record to delete using Arrow Keys and press Enter.
+
+     v. ADD AN ADMIN RECORD
+		- Creates a new admin user with login credentials.
+
+		EXAMPLE:
+		
+		1. Ensure you are viewing the admin database (press TAB to switch between admin/patient database).
+		2. Press + on the keyboard to initiate patient registration.
+		3. Fill all the form fields (Arrow Keys to navigate, keyboard input to type, Enter to proceed).
+		4. Upon successful registration, you will be redirected back to the database screen.
+         
+     vi. VIEW AN ADMIN RECORD
+		- Displays details of an existing admin account.
+
+		EXAMPLE:
+
+		1. Ensure you are viewing the admin database (press TAB to switch between admin/patient database).
+		2. Select an admin record to view using Arrow Keys and press Enter.
+         
+     vii. UPDATE AN ADMIN RECORD
+		- Allows modifications to an admin’s personal information.
+
+		EXAMPLE:
+
+		1. Ensure you are viewing the admin database (press TAB to switch between admin/patient database).
+		2. Select an admin record to update using Arrow Keys and press Enter.
+		3. Update all existing fields following the same process as adding an admin record (see ADD AN ADMIN RECORD, EXAMPLE for more info).
+         
+     viii. DELETE AN ADMIN RECORD
+		- An admin can remove another admin (except themselves).
+
+		EXAMPLE:
+
+		1. Ensure you are viewing the admin database (press TAB to switch between admin/patient database).
+		2. Select an admin record to delete using Arrow Keys and press Enter.
+		
+     ix. PAGINATED SEARCH CONTROLS
+		- Users can search for records using keywords in the first row (Search bar).
+		- The system paginates results for easier navigation.
+		- Users can move between pages using PgUp (previous page) and PgDn (next page).
+
+6. DATA VALIDATION RULES
+-------------------------------------------------
+- Patient and admin names must only contain letters and spaces.
+- Age must be a numerical value between 0 and 120.
+- Phone numbers must be numeric and within 10-15 digits.
+- Weight and Height must be numerical values and within a realistic range for BMI calculation.
+- IC Number must be numeric and follow the following format (e.g. 010403141107).
+- Email addresses must follow a standard format (e.g., user@example.com).
+- All accounts must have unique usernames.
+- Deleting the current logged user's Admin record is restricted to prevent self-deletion.
+- Do NOT delete or modify the contents of the /db directory while running the program, as this will cause memory corruption and leaks within the in-memory user database
+
+-------------------------------------------------
+END OF USER MANUAL
+
