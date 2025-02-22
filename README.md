@@ -17,6 +17,8 @@
 ## 📌 Introduction
 MedTek+ Hospital Management System is a **terminal-based application** built for **hospital staff** to efficiently manage patient and admin records. 
 
+![Hospital Management System Diagram](docs/diagram.svg)
+
 ✅ **Features:** 
 - Interactive **text-based UI** powered by **ncurses** 🖥️
 - **CRUD operations** for patient & admin records 📝
