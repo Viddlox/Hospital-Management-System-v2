@@ -37,33 +37,52 @@ Windows Installation Using WSL (Recommended)
 		wsl --install
 		```
 		b. Restart your computer when prompted.
-
-	2. Ensure Ubuntu is installed (if not):
-		a. Open the Microsoft Store and search for "Ubuntu".
-		b. Click "Install" and wait for the installation to complete.
 	
-	3. Open Ubuntu (from the Start menu) and install required packages:
+	2. Open Ubuntu (from the Start menu) and login/register your UNIX account, then install required packages:
 
 		```
 		sudo apt update && sudo apt upgrade -y
-		sudo apt install g++ make libncursesw5-dev libformw5-dev libmenuw5-dev uuid-dev
+		sudo apt install g++ make libncursesw5-dev
 		```
 
-	4. Clone the repository:
+	3. Clone the repository:
 
 		```
 		https://github.com/Viddlox/Hospital-Management-System-v2.git
 		```
 
-	5. Compile the program:
+	4. Compile the program:
 		```
 		make re
 		```
 
-	6. Run the executable:
+	5. Run the executable:
 		```
 		./Hospital_Management_System.exe
 		```
+
+Troubleshooting:
+
+	- If during step 1 (wsl --install), you see this error message:
+	
+		WSL2 is not supported with your current machine configuration.
+		Please enable the "Virtual Machine Platform" optional component and ensure virtualization is enabled in the BIOS.
+
+		i. Enable "Virtual Machine Platform" by running: 
+			```
+			wsl.exe --install --no-distribution
+			```
+
+		ii. Then restart your PC and enter your system BIOS (usually by pressing F2, F10, Del, or Esc during boot).
+
+		iii. Look for Intel VT-x (if you have an Intel processor) or AMD-V (for AMD processors), and enable it for virtualization.
+
+	- If during step 2 (dependency installation), you see errors messages of missing dependencies
+	  
+	  	i. Please install any missing depdencies by running:
+			```
+			sudo apt install <missing dependency name>
+			```
 
 4. CONTROLS AND KEY-BINDINGS:
 -------------------------------------------------
