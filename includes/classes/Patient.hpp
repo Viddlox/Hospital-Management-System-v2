@@ -5,9 +5,9 @@
 
 #include <unordered_map>  // Used to store patient attributes efficiently
 #include <map>            // Used for the admissions log (department -> list of dates)
-#include "Utils.hpp"      // Provides utility functions such as timestamp formatting
+#include "utils.hpp"      // Provides utility functions such as timestamp formatting
 #include "User.hpp"       // Base class for all users (Patient inherits from User)
-#include "Admissions.hpp" // Handles department-based admissions and their string conversions
+#include "admissions.hpp" // Handles department-based admissions and their string conversions
 
 class Patient : public User
 {

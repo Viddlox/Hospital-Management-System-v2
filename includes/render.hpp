@@ -40,7 +40,7 @@
 #endif
 
 // Project-specific headers
-#include "Admissions.hpp"  // Handles hospital department admissions
+#include "admissions.hpp"  // Handles hospital department admissions
 #include "UserManager.hpp" // Manages user accounts and authentication
 #include "utils.hpp"       // Utility functions for general-purpose operations
 

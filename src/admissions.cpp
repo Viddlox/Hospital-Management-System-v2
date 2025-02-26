@@ -1,4 +1,4 @@
-#include "Admissions.hpp"
+#include "admissions.hpp"
 #include <unordered_map>
 
 // 🔹 Converts Department enum to string

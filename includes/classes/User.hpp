@@ -8,7 +8,7 @@
 #include <filesystem> // Supports file and directory operations
 
 // Project-specific headers
-#include "Utils.hpp" // Provides utility functions such as UUID generation and timestamp formatting
+#include "utils.hpp" // Provides utility functions such as UUID generation and timestamp formatting
 #include "json.hpp"  // Enables JSON serialization/deserialization
 
 // Using the nlohmann JSON library

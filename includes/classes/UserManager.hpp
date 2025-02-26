@@ -14,7 +14,7 @@
 #include "utils.hpp" // Helper functions (e.g., string manipulation, validation)
 
 // Admissions management
-#include "Admissions.hpp" // Manages patient admissions and related operations
+#include "admissions.hpp" // Manages patient admissions and related operations
 
 
 // The UserManager class is responsible for managing the CRUD operations of user-related objects
